@@ -20,7 +20,7 @@ Section-split text from recent SEC 10-K annual reports, chunked for retrieval (R
 **Record format** (one JSON object per line):
 `id`, `title`, `content`, `meta` with `ticker`, `company`, `form`, `fiscal_year` (year of the period end date), `item`, `section`, `filed`, `url` (the filing on sec.gov).
 
-**Use with labagent**
+**Use with labagent** (the `rag-sec-filings` pack ships in labagent 0.2.0, not yet on PyPI)
 ```bash
 pip install 'labagent[rag]'
 labagent launch rag-sec-filings --name sec --param profile=<databricks-profile>
