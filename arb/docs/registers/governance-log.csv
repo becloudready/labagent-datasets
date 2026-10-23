@@ -1,0 +1,71 @@
+decision_id,decision_date,submission_id,submission_name,gate,tier,outcome,decided_by,conditions,dispensation_id,notes
+DEC-2026-001,2026-02-10,SUB-2026-015,Rotate TLS certificates tooling phase 2,G2,T2,Approved,ARB working session,,,
+DEC-2026-002,2026-02-11,SUB-2026-017,Data catalogue SaaS phase 3,G1,T1,Approved,Async: two domain architects,,,
+DEC-2026-003,2026-02-24,SUB-2026-002,CareAssist contact-centre generative AI assistant,G1,T3,Proceed,ARB working session,,,
+DEC-2026-004,2026-02-24,SUB-2026-012,Observability platform migration,G2,T2,Approved with conditions,ARB working session,"C1 Vendor delivers SCIM provisioning. (owner Platform Engineering Lead, due 2026-08-24)",DISP-2026-007,The missing SCIM support was accepted for six months provided the vendor delivered it.
+DEC-2026-005,2026-03-10,SUB-2026-018,Meeting notes SaaS phase 2,G1,T2,Approved,ARB working session,,,
+DEC-2026-006,2026-03-10,SUB-2026-019,Network capacity planner,G3,T2,Approved,ARB working session,,,
+DEC-2026-007,2026-03-10,SUB-2026-020,Developer portal refresh,G2,T2,Approved,ARB working session,,,
+DEC-2026-008,2026-03-12,SUB-2026-007,SurveyPulse customer survey tool,G1,T1,Approved,Async: two domain architects,,,Decided asynchronously by two domain architects under the Tier 1 route.
+DEC-2026-009,2026-03-17,SUB-2026-016,Design collaboration SaaS phase 2,G1,T3,Approved,ARB working session,,,
+DEC-2026-010,2026-03-19,SUB-2026-022,Expense reporting SaaS phase 3,G1,T1,Approved,Async: two domain architects,,,
+DEC-2026-011,2026-03-24,SUB-2026-024,Incident status page phase 3,G1,T1,Approved,Async: two domain architects,,,
+DEC-2026-012,2026-03-27,SUB-2026-023,Expense reporting SaaS phase 2,G1,T1,Approved,Async: two domain architects,,,
+DEC-2026-013,2026-03-30,SUB-2026-026,Training platform SaaS,G1,T1,Approved,Async: two domain architects,,,
+DEC-2026-014,2026-03-31,SUB-2026-001,BillingNext rating engine modernisation,G2,T3,Approved with conditions,ARB working session,,,
+DEC-2026-015,2026-04-07,SUB-2026-021,Call recording archive,G3,T3,Approved with conditions,ARB working session,,,
+DEC-2026-016,2026-04-14,SUB-2026-004,Fleet IoT telemetry hub,G2,T2,Approved with conditions,ARB working session,"C1 Complete an independent security assessment of the token design. (owner IoT Product Owner, due 2026-07-15); C2 Publish a plan to move device authentication to mutual TLS. (owner IoT Product Owner, due 2027-01-31)",DISP-2026-003,The Security Architect accepted device tokens for the ingestion path only. The customer-facing API must still meet the standard.
+DEC-2026-017,2026-04-14,SUB-2026-028,Order management upgrade,G3,T2,Deferred,ARB working session,,,
+DEC-2026-018,2026-04-21,SUB-2026-025,Spectrum licence tracker,G2,T2,Approved,ARB working session,,,
+DEC-2026-019,2026-04-21,SUB-2026-027,Training platform SaaS phase 2,G1,T2,Approved,ARB working session,,,
+DEC-2026-020,2026-04-27,SUB-2026-029,Data catalogue SaaS phase 2,G1,T1,Approved,Async: two domain architects,,,
+DEC-2026-021,2026-04-28,SUB-2026-005,Customer360 lakehouse,G2,T3,Approved with conditions,ARB working session,"C1 Implement pseudonymisation of customer identifiers before logs are shipped. (owner Lead Data Engineer, due 2026-07-31); C2 Ask the owners of STD-DAT-003 and STD-OBS-006 to publish a correction that resolves the conflict. (owner Chief Data Officer, due 2026-07-31)",,"The submission exposed a conflict: STD-DAT-003 R5.2 requires identifier logs to be gone in 90 days, while STD-OBS-006 R4.1 requires 13 months for production logs. Following the Appeals and Escalation process the Chair ruled for this submission only that identifier logs are kept 90 days and a pseudonymised copy is kept 13 months. The ruling does not change either standard."
+DEC-2026-022,2026-04-30,SUB-2026-030,Design collaboration SaaS,G1,T1,Approved,Async: two domain architects,,,
+DEC-2026-023,2026-05-11,SUB-2026-032,Legacy billing archive decommission phase 2,G3,T1,Approved,Async: two domain architects,,,
+DEC-2026-024,2026-05-12,SUB-2026-003,EdgeSense 5G edge analytics,G2,T2,Approved with conditions,ARB working session,"C1 Forward security events to the central platform within 5 minutes. (owner Edge Platform Lead, due 2026-06-30); C2 Provide a storage capacity plan for the edge nodes. (owner Edge Platform Lead, due 2026-07-31)",DISP-2026-002,The board accepted a shorter local retention for raw logs provided the security events reach the central platform quickly. The Data Architect noted that a renewal would be needed if the edge storage was not expanded.
+DEC-2026-025,2026-05-15,SUB-2026-034,Incident status page,G1,T1,Approved,Async: two domain architects,,,
+DEC-2026-026,2026-05-19,SUB-2026-031,Fraud rules engine phase 2,G3,T2,Approved with conditions,ARB working session,,,
+DEC-2026-027,2026-05-21,SUB-2026-035,Signature SaaS phase 3,G1,T1,Approved,Async: two domain architects,,,
+DEC-2026-028,2026-05-26,SUB-2026-010,PaymentsEdge card payments API,G2,T3,Not approved,ARB working session,"C1 Resubmit with tokenisation of card data and a Tier 1 recovery design. (owner Digital Commerce Architect, due 2026-08-15)",,"The board did not approve the design. Card numbers must not be stored outside a tokenised vault, and a 4 hour recovery does not meet the Tier 1 objective for a payment service. The team was asked to resubmit."
+DEC-2026-029,2026-06-02,SUB-2026-033,Field service scheduling,G3,T3,Not approved,ARB working session,,,
+DEC-2026-030,2026-06-09,SUB-2026-006,PartnerHub API gateway for wholesale partners,G2,T2,Approved with conditions,ARB working session,"C1 Migrate wave 1 of partners to mutual TLS. (owner Wholesale Integration Lead, due 2026-09-30); C2 Migrate wave 2 of partners to mutual TLS. (owner Wholesale Integration Lead, due 2026-11-30); C3 Migrate wave 3 of partners to mutual TLS. (owner Wholesale Integration Lead, due 2026-12-31)",DISP-2026-004,"The submission showed a conflict between STD-API-004 R6 and STD-SEC-002 R7. The Chair ruled that STD-API-004 is the more specific standard for API design, so mutual TLS bound tokens apply to every new API. Existing partners are covered by a time-limited dispensation."
+DEC-2026-031,2026-06-09,SUB-2026-036,Meeting notes SaaS,G1,T2,Approved,ARB working session,,,
+DEC-2026-032,2026-06-23,SUB-2026-002,CareAssist contact-centre generative AI assistant,G2,T3,Approved with conditions,ARB working session,,,
+DEC-2026-033,2026-06-23,SUB-2026-038,Voicemail transcription,G1,T2,Not approved,ARB working session,,,
+DEC-2026-034,2026-06-24,SUB-2026-042,Meeting notes SaaS phase 3,G1,T1,Approved with conditions,Async: two domain architects,,,
+DEC-2026-035,2026-06-30,SUB-2026-037,Network capacity planner phase 2,G1,T3,Approved,ARB working session,,,
+DEC-2026-036,2026-06-30,SUB-2026-039,Secrets vault upgrade,G2,T2,Approved,ARB working session,,,
+DEC-2026-037,2026-06-30,SUB-2026-040,Config management database cleanup,G3,T2,Approved,ARB working session,,,
+DEC-2026-038,2026-06-30,SUB-2026-041,Inventory forecasting,G2,T2,Approved with conditions,ARB working session,,,
+DEC-2026-039,2026-07-14,SUB-2026-008,Workday HR integration,G2,T2,Approved with conditions,ARB working session,"C1 Sign the data processing agreement before any employee data is shared. (owner Director HR Technology, due 2026-08-14); C2 Show SCIM provisioning working in the test environment. (owner Director HR Technology, due 2026-08-31)",,Approval was conditional on the signed data processing agreement. The decision date was later than the target because the requester took 4 business days to supply the vendor's assurance report.
+DEC-2026-040,2026-07-21,SUB-2026-043,Backup platform consolidation,G2,T2,Approved,ARB working session,,,
+DEC-2026-041,2026-07-27,SUB-2026-050,Incident status page phase 4,G1,T1,Approved,Async: two domain architects,,,
+DEC-2026-042,2026-07-28,SUB-2026-011,Mediation batch offload from the mainframe,G2,T2,Deferred,ARB working session,,,First review: deferred because there was no recovery runbook and no evidence that the batch fits the window. The team returned with both. The board approved with a dispensation for the batch pattern and a roadmap to events.
+DEC-2026-043,2026-07-28,SUB-2026-044,Enterprise chat bot for IT help,G1,T2,Deferred,ARB working session,,,
+DEC-2026-044,2026-07-28,SUB-2026-045,Roaming partner settlement,G2,T2,Approved,ARB working session,,,
+DEC-2026-045,2026-07-29,SUB-2026-051,Legacy billing archive decommission,G3,T1,Approved,Async: two domain architects,,,
+DEC-2026-046,2026-08-04,SUB-2026-014,Sales enablement knowledge assistant,G1,T2,Proceed,ARB working session,"C1 Show that retrieval respects source permissions in the design pack. (owner Sales Operations Lead, due 2026-11-30)",,The board approved the concept and asked for permission trimming to be proven in the design review before any build.
+DEC-2026-047,2026-08-04,SUB-2026-046,Incident status page phase 2,G1,T3,Approved,ARB working session,,,
+DEC-2026-048,2026-08-04,SUB-2026-047,Number portability gateway,G2,T2,Approved,ARB working session,,,
+DEC-2026-049,2026-08-04,SUB-2026-049,Retail store Wi-Fi analytics phase 3,G2,T2,Approved,ARB working session,,,
+DEC-2026-050,2026-08-07,SUB-2026-053,Retired provisioning system,G3,T1,Approved with conditions,Async: two domain architects,,,
+DEC-2026-051,2026-08-11,SUB-2026-001,BillingNext rating engine modernisation,G3,T3,Go,ARB working session,"C1 Complete a full regional failover test and show recovery within 60 minutes before go-live. (owner Billing Platform Lead, due 2026-07-31); C2 Complete the FinOps review of the run cost. (owner VP Customer Billing, due 2026-06-30); C3 Run the failover test every quarter as a condition of DISP-2026-001. (owner Billing Platform Lead, due 2026-09-30)",DISP-2026-001,The board accepted that STD-RES-005 and STD-CLD-001 give different recovery objectives for Tier 1 and agreed that a warm standby with a 60 minute recovery meets the intent. The Chair asked for a recorded dispensation and for proof of failover before go-live.
+DEC-2026-052,2026-08-11,SUB-2026-048,Spectrum licence tracker phase 2,G1,T3,Approved with conditions,ARB working session,,,
+DEC-2026-053,2026-08-18,SUB-2026-009,NetGraph network inventory graph,G2,T2,Approved with conditions,ARB working session,"C1 Limit test environment access to the six named engineers. (owner NetGraph Product Owner, due 2026-09-01); C2 Put graph data masking in place and remove real data from the test environment. (owner NetGraph Product Owner, due 2026-11-15)",DISP-2026-005,The board accepted a time-limited use of real data in test with a named group and a firm date for masking.
+DEC-2026-054,2026-08-20,SUB-2026-056,Old data mart decommission,G3,T1,Approved with conditions,Async: two domain architects,,,
+DEC-2026-055,2026-08-25,SUB-2026-010-R1,PaymentsEdge card payments API (resubmission),G2,T3,Approved with conditions,ARB working session,"C1 Complete the processor's PCI assessment and share the attestation. (owner Payments Product Owner, due 2026-10-31); C2 Complete a failover test showing recovery within 60 minutes before go-live. (owner Payments Platform Lead, due 2026-10-31)",,The resubmission resolved the card data finding. The board noted the same recovery-objective difference between the cloud and resilience standards seen in SUB-2026-001 and applied the same ruling.
+DEC-2026-056,2026-08-25,SUB-2026-054,Fraud rules engine,G1,T2,Approved with conditions,ARB working session,,,
+DEC-2026-057,2026-09-01,SUB-2026-052,Training platform SaaS phase 3,G1,T3,Approved,ARB working session,,,
+DEC-2026-058,2026-09-01,SUB-2026-057,Inventory forecasting phase 2,G1,T2,Approved with conditions,ARB working session,,,
+DEC-2026-059,2026-09-01,SUB-2026-058,Contract summary assistant,G1,T2,Approved,ARB working session,,,
+DEC-2026-060,2026-09-08,SUB-2026-011,Mediation batch offload from the mainframe,G2,T2,Approved with conditions,ARB working session,"C1 Publish the roadmap to move the feeds to events. (owner Mediation Product Owner, due 2027-03-31); C2 Add no new batch feeds. (owner Mediation Product Owner, due 2027-09-07)",DISP-2026-006,First review: deferred because there was no recovery runbook and no evidence that the batch fits the window. The team returned with both. The board approved with a dispensation for the batch pattern and a roadmap to events.
+DEC-2026-061,2026-09-08,SUB-2026-060,Data catalogue SaaS,G1,T1,Approved,Async: two domain architects,,,
+DEC-2026-062,2026-09-15,SUB-2026-055,Retail store Wi-Fi analytics phase 2,G3,T3,Approved,ARB working session,,,
+DEC-2026-063,2026-09-17,SUB-2026-013,Legacy CRM decommission,G3,T1,Go,Async: two domain architects,,,Decided asynchronously under the Tier 1 route.
+DEC-2026-064,2026-09-22,SUB-2026-059,SIM provisioning API v2,G2,T2,Approved,ARB working session,,,
+DEC-2026-065,2026-09-22,SUB-2026-062,Churn prediction model,G1,T2,Approved,ARB working session,,,
+DEC-2026-066,2026-09-24,SUB-2026-064,Expense reporting SaaS,G1,T1,Approved,Async: two domain architects,,,
+DEC-2026-067,2026-09-28,SUB-2026-066,Signature SaaS,G1,T1,Approved,Async: two domain architects,,,
+DEC-2026-068,2026-09-29,SUB-2026-063,Customer notification service,G3,T2,Approved with conditions,ARB working session,,,
+DEC-2026-069,2026-10-07,SUB-2026-069,Signature SaaS phase 2,G1,T1,Approved,Async: two domain architects,,,
+DEC-2026-070,2026-10-13,SUB-2026-061,Internal wiki search upgrade,G2,T3,Approved,ARB working session,,,

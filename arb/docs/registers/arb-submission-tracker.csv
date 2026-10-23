@@ -1,0 +1,73 @@
+Title,SubmissionID,Requester,RequestType,Tier,CurrentGate,Status,CompleteDate,SLADueDate,DecisionDate,OpenConditions
+BillingNext rating engine modernisation,SUB-2026-001,VP Customer Billing,Major change to an existing system,T3,G3,Go,2026-07-28,2026-08-27,2026-08-11,0
+CareAssist contact-centre generative AI assistant,SUB-2026-002,SVP Customer Care,Generative AI use case (customer facing),T3,G3,In review,2026-10-06,2026-11-04,,0
+EdgeSense 5G edge analytics,SUB-2026-003,VP Network Technology,New system or platform,T2,G2,Approved with conditions,2026-04-28,2026-05-12,2026-05-12,0
+Fleet IoT telemetry hub,SUB-2026-004,VP Enterprise Services,New system or platform,T2,G2,Approved with conditions,2026-03-31,2026-04-14,2026-04-14,1
+Customer360 lakehouse,SUB-2026-005,Chief Data Officer,New system or platform,T3,G2,Approved with conditions,2026-04-07,2026-05-07,2026-04-28,1
+PartnerHub API gateway for wholesale partners,SUB-2026-006,VP Wholesale,Major change to an existing system,T2,G2,Approved with conditions,2026-05-26,2026-06-09,2026-06-09,2
+SurveyPulse customer survey tool,SUB-2026-007,Director Customer Insights,SaaS onboarding,T1,G1,Approved,2026-03-09,2026-03-12,2026-03-12,0
+Workday HR integration,SUB-2026-008,CHRO,SaaS onboarding,T2,G2,Approved with conditions,2026-06-23,2026-07-14,2026-07-14,0
+NetGraph network inventory graph,SUB-2026-009,VP Network Operations,New system or platform,T2,G2,Approved with conditions,2026-08-04,2026-08-18,2026-08-18,1
+PaymentsEdge card payments API,SUB-2026-010,VP Digital Commerce,New system or platform,T3,G2,Not approved,2026-05-05,2026-06-08,2026-05-26,0
+PaymentsEdge card payments API (resubmission),SUB-2026-010-R1,VP Digital Commerce,New system or platform,T3,G2,Approved with conditions,2026-08-04,2026-09-02,2026-08-25,2
+Mediation batch offload from the mainframe,SUB-2026-011,VP Network Operations,Major change to an existing system,T2,G2,Approved with conditions,2026-08-25,2026-09-09,2026-09-08,2
+Observability platform migration,SUB-2026-012,VP Platform Engineering,SaaS onboarding,T2,G2,Approved with conditions,2026-02-10,2026-02-25,2026-02-24,0
+Legacy CRM decommission,SUB-2026-013,VP Customer Care,Decommissioning a system that holds Confidential or Restricted data,T1,G3,Go,2026-09-10,2026-09-15,2026-09-17,0
+Sales enablement knowledge assistant,SUB-2026-014,VP Enterprise Sales,Generative AI use case (internal users only),T2,G1,Proceed,2026-07-21,2026-08-04,2026-08-04,1
+Rotate TLS certificates tooling phase 2,SUB-2026-015,CFO Office,Major change to an existing system,T2,G2,Approved,2026-01-26,2026-02-11,2026-02-10,0
+Design collaboration SaaS phase 2,SUB-2026-016,VP Platform Engineering,SaaS onboarding,T3,G1,Approved,2026-02-05,2026-03-11,2026-03-17,0
+Data catalogue SaaS phase 3,SUB-2026-017,VP Customer Care,SaaS onboarding,T1,G1,Approved,2026-02-09,2026-02-12,2026-02-11,0
+Meeting notes SaaS phase 2,SUB-2026-018,VP Network Technology,SaaS onboarding,T2,G1,Approved,2026-02-17,2026-03-04,2026-03-10,0
+Network capacity planner,SUB-2026-019,VP Network Technology,New system or platform,T2,G3,Approved,2026-02-23,2026-03-09,2026-03-10,0
+Developer portal refresh,SUB-2026-020,VP Wholesale,Major change to an existing system,T2,G2,Approved,2026-02-23,2026-03-09,2026-03-10,0
+Call recording archive,SUB-2026-021,Chief Data Officer,Major change to an existing system,T3,G3,Approved with conditions,2026-03-03,2026-04-03,2026-04-07,0
+Expense reporting SaaS phase 3,SUB-2026-022,VP Network Technology,SaaS onboarding,T1,G1,Approved,2026-03-16,2026-03-19,2026-03-19,0
+Expense reporting SaaS phase 2,SUB-2026-023,VP Customer Care,SaaS onboarding,T1,G1,Approved,2026-03-20,2026-03-25,2026-03-27,0
+Incident status page phase 3,SUB-2026-024,VP Digital Commerce,SaaS onboarding,T1,G1,Approved,2026-03-20,2026-03-25,2026-03-24,0
+Spectrum licence tracker,SUB-2026-025,VP Digital Commerce,New system or platform,T2,G2,Approved,2026-03-23,2026-04-08,2026-04-21,0
+Training platform SaaS,SUB-2026-026,Chief Data Officer,SaaS onboarding,T1,G1,Approved,2026-03-25,2026-03-30,2026-03-30,0
+Training platform SaaS phase 2,SUB-2026-027,Chief Data Officer,SaaS onboarding,T2,G1,Approved,2026-03-31,2026-04-16,2026-04-21,0
+Order management upgrade,SUB-2026-028,VP Network Technology,Major change to an existing system,T2,G3,Deferred,2026-03-31,2026-04-14,2026-04-14,0
+Data catalogue SaaS phase 2,SUB-2026-029,VP Digital Commerce,SaaS onboarding,T1,G1,Approved,2026-04-22,2026-04-27,2026-04-27,0
+Design collaboration SaaS,SUB-2026-030,VP Network Technology,SaaS onboarding,T1,G1,Approved,2026-04-27,2026-04-30,2026-04-30,0
+Fraud rules engine phase 2,SUB-2026-031,CHRO,New system or platform,T2,G3,Approved with conditions,2026-05-04,2026-05-20,2026-05-19,0
+Legacy billing archive decommission phase 2,SUB-2026-032,VP Digital Commerce,Decommissioning a system that holds Confidential or Restricted data,T1,G3,Approved,2026-05-04,2026-05-07,2026-05-11,0
+Field service scheduling,SUB-2026-033,VP Customer Care,New system or platform,T3,G3,Not approved,2026-05-06,2026-06-04,2026-06-02,0
+Incident status page,SUB-2026-034,VP Wholesale,SaaS onboarding,T1,G1,Approved,2026-05-14,2026-05-19,2026-05-15,0
+Signature SaaS phase 3,SUB-2026-035,VP Platform Engineering,SaaS onboarding,T1,G1,Approved,2026-05-18,2026-05-21,2026-05-21,0
+Meeting notes SaaS,SUB-2026-036,Chief Data Officer,SaaS onboarding,T2,G1,Approved,2026-05-20,2026-06-05,2026-06-09,0
+Network capacity planner phase 2,SUB-2026-037,VP Network Technology,New system or platform,T3,G1,Approved,2026-05-26,2026-06-24,2026-06-30,0
+Voicemail transcription,SUB-2026-038,VP Network Technology,Generative AI use case (internal users only),T2,G1,Not approved,2026-06-08,2026-06-23,2026-06-23,0
+Secrets vault upgrade,SUB-2026-039,VP Network Technology,Major change to an existing system,T2,G2,Approved,2026-06-10,2026-06-25,2026-06-30,0
+Config management database cleanup,SUB-2026-040,VP Digital Commerce,Major change to an existing system,T2,G3,Approved,2026-06-15,2026-07-01,2026-06-30,0
+Inventory forecasting,SUB-2026-041,Chief Data Officer,New system or platform,T2,G2,Approved with conditions,2026-06-16,2026-07-01,2026-06-30,0
+Meeting notes SaaS phase 3,SUB-2026-042,VP Platform Engineering,SaaS onboarding,T1,G1,Approved with conditions,2026-06-22,2026-06-25,2026-06-24,0
+Backup platform consolidation,SUB-2026-043,VP Platform Engineering,Major change to an existing system,T2,G2,Approved,2026-07-01,2026-07-16,2026-07-21,0
+Enterprise chat bot for IT help,SUB-2026-044,VP Network Technology,Generative AI use case (internal users only),T2,G1,Deferred,2026-07-08,2026-07-22,2026-07-28,0
+Roaming partner settlement,SUB-2026-045,VP Digital Commerce,Major change to an existing system,T2,G2,Approved,2026-07-10,2026-07-27,2026-07-28,0
+Incident status page phase 2,SUB-2026-046,VP Platform Engineering,SaaS onboarding,T3,G1,Approved,2026-07-13,2026-08-10,2026-08-04,0
+Number portability gateway,SUB-2026-047,CFO Office,Major change to an existing system,T2,G2,Approved,2026-07-13,2026-07-27,2026-08-04,0
+Spectrum licence tracker phase 2,SUB-2026-048,VP Wholesale,New system or platform,T3,G1,Approved with conditions,2026-07-13,2026-08-13,2026-08-11,0
+Retail store Wi-Fi analytics phase 3,SUB-2026-049,VP Wholesale,New system or platform,T2,G2,Approved,2026-07-14,2026-07-31,2026-08-04,0
+Incident status page phase 4,SUB-2026-050,VP Customer Care,SaaS onboarding,T1,G1,Approved,2026-07-21,2026-07-24,2026-07-27,0
+Legacy billing archive decommission,SUB-2026-051,VP Customer Care,Decommissioning a system that holds Confidential or Restricted data,T1,G3,Approved,2026-07-23,2026-07-28,2026-07-29,0
+Training platform SaaS phase 3,SUB-2026-052,VP Wholesale,SaaS onboarding,T3,G1,Approved,2026-08-03,2026-08-31,2026-09-01,0
+Retired provisioning system,SUB-2026-053,VP Wholesale,Decommissioning a system that holds Confidential or Restricted data,T1,G3,Approved with conditions,2026-08-04,2026-08-07,2026-08-07,0
+Fraud rules engine,SUB-2026-054,VP Network Technology,New system or platform,T2,G1,Approved with conditions,2026-08-10,2026-08-25,2026-08-25,0
+Retail store Wi-Fi analytics phase 2,SUB-2026-055,Chief Data Officer,New system or platform,T3,G3,Approved,2026-08-12,2026-09-11,2026-09-15,0
+Old data mart decommission,SUB-2026-056,Chief Data Officer,Decommissioning a system that holds Confidential or Restricted data,T1,G3,Approved with conditions,2026-08-17,2026-08-20,2026-08-20,0
+Inventory forecasting phase 2,SUB-2026-057,VP Network Technology,New system or platform,T2,G1,Approved with conditions,2026-08-17,2026-08-31,2026-09-01,0
+Contract summary assistant,SUB-2026-058,VP Platform Engineering,Generative AI use case (internal users only),T2,G1,Approved,2026-08-17,2026-09-02,2026-09-01,0
+SIM provisioning API v2,SUB-2026-059,VP Network Technology,Major change to an existing system,T2,G2,Approved,2026-09-01,2026-09-16,2026-09-22,0
+Data catalogue SaaS,SUB-2026-060,VP Network Technology,SaaS onboarding,T1,G1,Approved,2026-09-03,2026-09-09,2026-09-08,0
+Internal wiki search upgrade,SUB-2026-061,VP Wholesale,Major change to an existing system,T3,G2,Approved,2026-09-03,2026-10-05,2026-10-13,0
+Churn prediction model,SUB-2026-062,VP Customer Care,Generative AI use case (internal users only),T2,G1,Approved,2026-09-08,2026-09-22,2026-09-22,0
+Customer notification service,SUB-2026-063,VP Wholesale,Major change to an existing system,T2,G3,Approved with conditions,2026-09-08,2026-09-25,2026-09-29,0
+Expense reporting SaaS,SUB-2026-064,CFO Office,SaaS onboarding,T1,G1,Approved,2026-09-21,2026-09-24,2026-09-24,0
+Retail store Wi-Fi analytics,SUB-2026-065,Chief Data Officer,New system or platform,T3,G2,In review,2026-09-21,2026-10-22,,0
+Signature SaaS,SUB-2026-066,VP Wholesale,SaaS onboarding,T1,G1,Approved,2026-09-23,2026-09-28,2026-09-28,0
+Rotate TLS certificates tooling,SUB-2026-067,Chief Data Officer,Major change to an existing system,T2,G3,In review,2026-10-01,2026-10-16,,0
+Design collaboration SaaS phase 3,SUB-2026-068,VP Network Technology,SaaS onboarding,T2,G1,In review,2026-10-02,2026-10-19,,0
+Signature SaaS phase 2,SUB-2026-069,VP Digital Commerce,SaaS onboarding,T1,G1,Approved,2026-10-05,2026-10-08,2026-10-07,0
+Field service scheduling phase 3,SUB-2026-070,VP Customer Care,New system or platform,T3,G3,In review,2026-10-05,2026-11-06,,0
+Field service scheduling phase 2,SUB-2026-071,CHRO,New system or platform,T2,G1,In review,2026-10-07,2026-10-22,,0
