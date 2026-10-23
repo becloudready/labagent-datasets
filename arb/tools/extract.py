@@ -64,11 +64,6 @@ def pdf_outline(path: Path) -> List[Tuple[int, str]]:
     return entries
 
 
-def pdf_title_block(path: Path) -> Dict[str, str]:
-    info = pypdf.PdfReader(str(path)).metadata or {}
-    return {"title": str(info.get("/Title", "")), "subject": str(info.get("/Subject", ""))}
-
-
 def eml_text(path: Path) -> Tuple[Dict[str, str], str]:
     msg = email.message_from_bytes(path.read_bytes(), policy=policy.default)
     headers = {k: str(msg[k]) for k in ("From", "To", "Cc", "Date", "Subject", "In-Reply-To") if msg[k]}

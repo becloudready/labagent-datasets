@@ -3,9 +3,10 @@
 
     python3 arb/tools/build.py --version 2026.10 [--out arb/dist]
 
-Reads : arb/docs/process, arb/docs/standards (authored), arb/public (fetched), arb/tools/submissions.py (authored data)
-Writes: arb/docs/submissions, dispensations, minutes, registers  (rendered, committed so they can be reviewed and edited by hand)
-        arb/dist/arb-<version>.{chunks.jsonl.gz, eval.jsonl, corpus.zip, manifest.json}, SHA256SUMS
+Reads : arb/docs/process, arb/docs/standards (hand-written), arb/public (fetched), arb/tools/submissions.py (authored data)
+Writes: arb/build/        generated Markdown and CSV, the inputs of the PDFs (gitignored)
+        arb/dist/corpus/  the files an organisation would hold: PDF, email, Excel, public web pages (gitignored)
+        arb/dist/arb-<version>.{chunks.jsonl.gz, chunks-naive-pdf.jsonl.gz, eval.jsonl, corpus.zip, manifest.json}, SHA256SUMS
 
 Deterministic: same inputs give byte-identical outputs. Evaluation answers that depend on numbers or dates are COMPUTED from the data.
 """
@@ -33,7 +34,8 @@ import render_pdf  # noqa: E402
 import submissions as S  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
-DOCS = ROOT / "docs"
+DOCS = ROOT / "docs"          # hand-written sources (committed): process and standards
+BUILD = ROOT / "build"        # generated from submissions.py and the strings below (gitignored, rebuilt every time)
 PUBLIC = ROOT / "public"
 HOLIDAYS = {dt.date.fromisoformat(d) for d in ("2026-01-01", "2026-01-19", "2026-02-16", "2026-05-25", "2026-06-19", "2026-07-03", "2026-09-07", "2026-10-12")}
 SLA_DAYS = {"T1": 3, "T2": 10, "T3": 20}
@@ -502,7 +504,7 @@ def table_chunks(doc_id: str, title: str, doc_type: str, rows: List[Dict[str, An
         text = "| " + " | ".join(cols) + " |\n|" + "---|" * len(cols) + "\n" + "\n".join("| " + " | ".join(str(r.get(c, "")) for c in cols) + " |" for r in grp)
         out.append(dict(id=f"{doc_id}-{i // per + 1}", doc_id=doc_id, title=f"{title}, rows {i + 1} to {i + len(grp)}", content=f"{title}\n{text}",
                         meta=dict(doc_id=doc_id, doc_type=doc_type, title=title, section=f"rows {i + 1}-{i + len(grp)}", source_system="SharePoint", status="current",
-                                  source_path=source_path, source_format="csv", license=CONTENT_LICENSE)))
+                                  source_path=source_path, source_format="xlsx", license=CONTENT_LICENSE)))
     return out
 
 
@@ -618,7 +620,7 @@ def normalise_zip(data: bytes) -> bytes:
 
 
 # ---------------------------------------------------------------- evaluation set
-def build_eval(recs, disp_rows, throughput) -> List[Dict[str, Any]]:
+def build_eval(recs, disp_rows) -> List[Dict[str, Any]]:
     h1 = [r for r in recs if r["decided"] and D("2026-01-01") <= r["decided"] <= D("2026-06-30")]
     def med(t): return statistics.median([r["cycle"] for r in h1 if r["tier"] == t])
     t2h1 = [r for r in h1 if r["tier"] == "T2"]
@@ -703,11 +705,11 @@ def main() -> int:
 
     # derived documents that stay as reviewable Markdown (the PDFs below are rendered from these)
     for s_ in S.SUBMISSIONS:
-        write_if_changed(DOCS / "submissions" / f"{s_['id']}.md", render_submission(s_))
+        write_if_changed(BUILD / "submissions" / f"{s_['id']}.md", render_submission(s_))
     for d in S.DISPENSATIONS:
-        write_if_changed(DOCS / "dispensations" / f"{d['id']}.md", render_dispensation(d))
-    write_if_changed(DOCS / "process" / "tracker-schema.md", TRACKER_SCHEMA)
-    write_if_changed(DOCS / "process" / "throughput-definitions.md", THROUGHPUT_DEFS)
+        write_if_changed(BUILD / "dispensations" / f"{d['id']}.md", render_dispensation(d))
+    write_if_changed(BUILD / "process" / "tracker-schema.md", TRACKER_SCHEMA)
+    write_if_changed(BUILD / "process" / "throughput-definitions.md", THROUGHPUT_DEFS)
     rows = log_rows(recs)
     log_cols = ["decision_id", "decision_date", "submission_id", "submission_name", "gate", "tier", "outcome", "decided_by", "conditions", "dispensation_id", "notes"]
     thr = throughput_rows(recs)
@@ -721,7 +723,7 @@ def main() -> int:
     registers = {"governance-log": (rows, log_cols, "Governance log"), "throughput-fy2026": (thr, thr_cols, "Throughput"),
                  "arb-submission-tracker": (trk, trk_cols, "ARB Submission Tracker"), "dispensation-register": (disp_rows, disp_cols, "Dispensation Register")}
     for name, (r, c, _t) in registers.items():
-        write_if_changed(DOCS / "registers" / f"{name}.csv", csv_text(r, c))
+        write_if_changed(BUILD / "registers" / f"{name}.csv", csv_text(r, c))
 
     # ---- render the corpus as the files an organisation would really hold
     out = Path(a.out)
@@ -730,8 +732,9 @@ def main() -> int:
         import shutil
         shutil.rmtree(corpus)
     files: List[Dict[str, Any]] = []
-    for sub in ("process", "standards", "submissions", "dispensations"):
-        for p in sorted((DOCS / sub).glob("*.md")):
+    sources = [("process", DOCS), ("process", BUILD), ("standards", DOCS), ("submissions", BUILD), ("dispensations", BUILD)]
+    for sub, base in sources:
+        for p in sorted((base / sub).glob("*.md")):
             fm, body = parse(p.read_text())
             target = corpus / sub / pdf_filename(fm)
             render_pdf.render_pdf(target, fm, body)
@@ -744,10 +747,10 @@ def main() -> int:
             files.append(dict(kind="eml", path=target, rel=f"corpus/minutes/{target.name}", doc_id=doc_id, info=info))
     for name, (r, c, tab) in registers.items():
         (corpus / "registers").mkdir(parents=True, exist_ok=True)
-        (corpus / "registers" / f"{name}.csv").write_text(csv_text(r, c))
         xl = table_workbook(r, c, tab, THROUGHPUT_DEFS if name == "throughput-fy2026" else "")
-        if xl:
-            (corpus / "registers" / f"{name}.xlsx").write_bytes(xl)
+        if xl is None:
+            raise SystemExit("openpyxl is required to build the Excel registers: pip install -r arb/requirements.txt")
+        (corpus / "registers" / f"{name}.xlsx").write_bytes(xl)
     (corpus / "public").mkdir(parents=True, exist_ok=True)
     for p in sorted(PUBLIC.glob("*.md")):
         (corpus / "public" / p.name).write_bytes(p.read_bytes())
@@ -762,10 +765,10 @@ def main() -> int:
                 ch += eml_file_chunks(f["path"], f["rel"], f["doc_id"], f["info"])
         for p in sorted(PUBLIC.glob("*.md")):
             ch += doc_chunks(p, f"corpus/public/{p.name}", public=True)
-        ch += table_chunks("REG-DISPENSATIONS", "Dispensation Register", "register", disp_rows, ["dispensation_id", "submission_id", "standard", "requirement", "status", "granted", "expiry", "owner"], 8, "corpus/registers/dispensation-register.csv")
-        ch += table_chunks("REG-GOVLOG", "Governance Log", "register", rows, ["decision_id", "decision_date", "submission_id", "submission_name", "gate", "tier", "outcome"], 8, "corpus/registers/governance-log.csv")
-        ch += table_chunks("REG-THROUGHPUT", "Throughput Workbook FY2026", "register", thr, ["submission_id", "tier", "gate", "complete_date", "decision_date", "cycle_business_days", "sla_met", "outcome"], 8, "corpus/registers/throughput-fy2026.csv")
-        ch += table_chunks("REG-TRACKER", "ARB Submission Tracker", "register", trk, ["SubmissionID", "Title", "Tier", "CurrentGate", "Status", "DecisionDate", "OpenConditions"], 8, "corpus/registers/arb-submission-tracker.csv")
+        ch += table_chunks("REG-DISPENSATIONS", "Dispensation Register", "register", disp_rows, ["dispensation_id", "submission_id", "standard", "requirement", "status", "granted", "expiry", "owner"], 8, "corpus/registers/dispensation-register.xlsx")
+        ch += table_chunks("REG-GOVLOG", "Governance Log", "register", rows, ["decision_id", "decision_date", "submission_id", "submission_name", "gate", "tier", "outcome"], 8, "corpus/registers/governance-log.xlsx")
+        ch += table_chunks("REG-THROUGHPUT", "Throughput Workbook FY2026", "register", thr, ["submission_id", "tier", "gate", "complete_date", "decision_date", "cycle_business_days", "sla_met", "outcome"], 8, "corpus/registers/throughput-fy2026.xlsx")
+        ch += table_chunks("REG-TRACKER", "ARB Submission Tracker", "register", trk, ["SubmissionID", "Title", "Tier", "CurrentGate", "Status", "DecisionDate", "OpenConditions"], 8, "corpus/registers/arb-submission-tracker.xlsx")
         return ch
 
     chunks = build_chunks(naive=False)
@@ -773,7 +776,7 @@ def main() -> int:
     ids = [c["id"] for c in chunks]
     assert len(ids) == len(set(ids)), "duplicate chunk ids"
 
-    ev = build_eval(recs, disp_rows, thr)
+    ev = build_eval(recs, disp_rows)
     known = {c["doc_id"] for c in chunks}
     for q in ev:
         for d in q["expected_docs"]:

@@ -1,17 +1,30 @@
 # ARB dataset: an Architecture Review Board corpus for RAG labs
 
-A fictional telecom, **Meridian Communications**, and the records its Architecture Review Board (ARB) would hold, in the formats it would hold them: **PDF** for standards, policies, forms, submission packs and dispensations; **email (.eml)** for minutes and the replies that change them; **Excel and CSV** for the registers. Plus public architecture guidance that is licensed for reuse. Built so the same corpus can be loaded into different RAG implementations and compared.
+A fictional telecom, **Meridian Communications**, and the records its Architecture Review Board (ARB) would hold, in the formats it would hold them: **PDF** for standards, policies, forms, submission packs and dispensations; **email (.eml)** for minutes and the replies that change them; **Excel** for the registers. Plus public architecture guidance that is licensed for reuse. Built so the same corpus can be loaded into different RAG implementations and compared.
 
 Everything about Meridian is invented. No real company, customer, or employee appears. Email addresses use the reserved `.example` domain.
 
 | | |
 |---|---|
-| Corpus files | 41 PDF, 17 email, 4 Excel, 4 CSV, 20 public web pages (Markdown) |
+| Corpus files | 41 PDF, 17 email, 4 Excel, 20 public web pages (Markdown) |
 | Documents | 82 (62 Meridian documents and emails, 20 public references) |
-| Chunks | 259, about 1,000 characters each, with page numbers and metadata |
+| Chunks | 258, about 1,000 characters each, with page numbers and metadata |
 | Evaluation questions | 32, each with expected source documents and expected facts |
 | As of | 2026-10-15 (the date inside the dataset: it decides which dispensations have expired) |
 | Size | corpus archive 0.6 MB, chunks 75 KB |
+
+## What is committed and what is generated
+
+| Path | In git? | What |
+|---|---|---|
+| `arb/docs/process`, `arb/docs/standards` | yes | The hand-written process documents and standards (Markdown sources) |
+| `arb/tools/submissions.py` | yes | The authored facts: 15 submissions, 7 dispensations, people, follow-up emails |
+| `arb/public` | yes | The fetched public references, kept so the build never needs the network |
+| `arb/tools`, `arb/tests` | yes | Build, renderers, extraction, try-out script, tests |
+| `arb/build/` | no | Generated Markdown and CSV that feed the PDFs and registers |
+| `arb/dist/` | no | The corpus files, chunks, evaluation set, manifest, and checksums. Published as release assets, not committed |
+
+Everything not committed is rebuilt by `python3 arb/tools/build.py`, and the result is byte-identical every time.
 
 ## What is in the corpus (`corpus/` in the archive)
 
@@ -22,7 +35,7 @@ Everything about Meridian is invented. No real company, customer, or employee ap
 | `submissions` | PDF | Fifteen completed ARB-F3 packs: compliance matrix, options, decision, conditions | 15 |
 | `dispensations` | PDF | Seven completed ARB-F5 dispensation requests. Status is as of 2026-10-15 | 7 |
 | `minutes` | email | Fifteen minutes emails sent the business day after each session, and two follow-up replies | 17 |
-| `registers` | Excel + CSV | Governance log, dispensation register, ARB Submission Tracker, throughput workbook | 4 + 4 |
+| `registers` | Excel | Governance log, dispensation register, ARB Submission Tracker, throughput workbook | 4 |
 | `public` | Markdown | Public guidance (below), each file with source, licence, and attribution | 20 |
 
 The PDFs look like controlled documents: a title block with a metadata table, a running header and footer ("Page n of N", "Uncontrolled when printed"), bookmarks, and tables drawn as cells. The text is selectable. They are **not scans**: there is no OCR step.

@@ -86,7 +86,7 @@ def test_eval_references_exist_and_declines_have_no_sources(chunks, evalset):
 
 
 def test_numeric_answers_are_computed_from_the_data(dist, evalset):
-    rows = list(csv.DictReader((ARB / "docs" / "registers" / "throughput-fy2026.csv").open()))
+    rows = list(csv.DictReader((ARB / "build" / "registers" / "throughput-fy2026.csv").open()))
     h1 = [r for r in rows if r["decision_date"] and "2026-01-01" <= r["decision_date"] <= "2026-06-30"]
     t2 = [r for r in h1 if r["tier"] == "T2"]
     med = statistics.median(int(r["cycle_business_days"]) for r in t2)
@@ -95,8 +95,8 @@ def test_numeric_answers_are_computed_from_the_data(dist, evalset):
     assert next(x for x in evalset if x["id"] == "num-02")["expected_facts"] == [str(sum(1 for r in t2 if r["sla_met"] == "No"))]
 
 
-def test_tiers_follow_the_front_door_guide():
-    rows = list(csv.DictReader((ARB / "docs" / "registers" / "throughput-fy2026.csv").open()))
+def test_tiers_follow_the_front_door_guide(dist):
+    rows = list(csv.DictReader((ARB / "build" / "registers" / "throughput-fy2026.csv").open()))
     for r in rows:
         t, rt = r["tier"], r["request_type"]
         if "Decommissioning" in rt:
@@ -109,8 +109,8 @@ def test_tiers_follow_the_front_door_guide():
             assert dt.date.fromisoformat(r["decision_date"]).weekday() == 1, r["submission_id"]
 
 
-def test_cycle_times_match_the_business_day_rule():
-    rows = list(csv.DictReader((ARB / "docs" / "registers" / "throughput-fy2026.csv").open()))
+def test_cycle_times_match_the_business_day_rule(dist):
+    rows = list(csv.DictReader((ARB / "build" / "registers" / "throughput-fy2026.csv").open()))
     for r in rows:
         if r["decision_date"]:
             got = build.bdays_between(build.D(r["complete_date"]), build.D(r["decision_date"])) - int(r["paused_business_days"])
@@ -135,14 +135,13 @@ def test_three_planted_conflicts_and_one_superseded_standard_exist():
     assert sum("status: superseded" in t for t in std.values()) == 1
 
 
-def test_no_personal_or_real_customer_identifiers(chunks):
+def test_no_personal_or_real_customer_identifiers(chunks, dist):
     banned = re.compile(r"AT&T|Collabera|Cognixia|Verizon|T-Mobile|Vodafone", re.I)
     email = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-    for sub in ("process", "standards", "submissions", "dispensations", "registers"):
-        for p in (ARB / "docs" / sub).glob("*"):
-            text = p.read_text()
-            assert not banned.search(text), p.name
-            assert not email.search(text), p.name
+    for p in [*(ARB / "docs").glob("*/*.md"), *(ARB / "build").glob("*/*")]:
+        text = p.read_text()
+        assert not banned.search(text), p.name
+        assert not email.search(text), p.name
     for c in chunks:                                  # the only addresses anywhere are on the reserved .example domain
         if c["meta"]["doc_type"] == "reference":
             continue
@@ -201,15 +200,29 @@ def test_the_superseded_standard_is_marked_in_the_pdf_itself(chunks):
     assert "Superseded" in old[0]["content"] and "replaced by version 3.0" in old[0]["content"]
 
 
-def test_follow_up_emails_change_things_the_registers_do_not_know(chunks):
+def test_follow_up_emails_change_things_the_registers_do_not_know(chunks, dist):
     reply2 = " ".join(c["content"] for c in chunks if c["doc_id"] == "MIN-2026-08-18-R1")
     assert "2026-12-15" in reply2 and "DISP-2026-005" in reply2
-    register = (ARB / "docs" / "registers" / "dispensation-register.csv").read_text()
+    register = (ARB / "build" / "registers" / "dispensation-register.csv").read_text()
     assert "2026-11-15" in register and "2026-12-15" not in register                      # the drift is deliberate and documented
     legal = " ".join(c["content"] for c in chunks if c["doc_id"] == "MIN-2026-04-28-R1")
     assert "destroyed" in legal
-    assert "destroyed" not in (ARB / "docs" / "submissions" / "SUB-2026-005.md").read_text()
+    assert "destroyed" not in (ARB / "build" / "submissions" / "SUB-2026-005.md").read_text()
 
 
 def test_eval_has_email_questions(evalset):
     assert {"mail-01", "mail-02"} <= {q["id"] for q in evalset} and any(q["category"] == "email" for q in evalset)
+
+
+def test_generated_files_are_not_committed():
+    """The Markdown intermediates and CSVs are rebuilt from submissions.py: committing them only invites drift."""
+    tracked = subprocess.run(["git", "ls-files", "arb/build", "arb/dist"], cwd=ARB.parent, capture_output=True, text=True).stdout.split()
+    assert tracked == []
+    ignored = (ARB.parent / ".gitignore").read_text()
+    assert "arb/build/" in ignored and "arb/dist/" in ignored
+    assert not list((ARB / "docs").glob("submissions")) and not list((ARB / "docs").glob("registers"))
+
+
+def test_corpus_registers_ship_as_excel_only(dist):
+    names = sorted(p.name for p in (dist / "corpus" / "registers").iterdir())
+    assert names == ["arb-submission-tracker.xlsx", "dispensation-register.xlsx", "governance-log.xlsx", "throughput-fy2026.xlsx"]
