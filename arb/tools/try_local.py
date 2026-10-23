@@ -25,17 +25,20 @@ def main() -> int:
     ap.add_argument("--top-k", type=int, default=5)
     ap.add_argument("--answers", action="store_true")
     ap.add_argument("--only", default="")
+    ap.add_argument("--naive", action="store_true", help="use chunks from naive PDF extraction (header and footer kept, table cells split one per line)")
     a = ap.parse_args()
     from labagent.ai.rag import RAGLabClient
 
     dist = Path(a.dist)
-    rows = [json.loads(l) for l in gzip.open(dist / f"arb-{a.version}.chunks.jsonl.gz", "rt")]
+    name = "chunks-naive-pdf" if a.naive else "chunks"
+    rows = [json.loads(l) for l in gzip.open(dist / f"arb-{a.version}.{name}.jsonl.gz", "rt")]
     questions = [json.loads(l) for l in open(dist / f"arb-{a.version}.eval.jsonl")]
     if a.only:
         keep = set(a.only.split(","))
         questions = [q for q in questions if q["id"] in keep]
     rag = RAGLabClient(vector_db="chroma")
     res = rag.ingest_chunks(rows)
+    print(f"PDF extraction: {'NAIVE' if a.naive else 'layout-aware'}")
     print(f"indexed {res.chunks} chunks from {res.documents} documents with {res.embedding_model} in {res.elapsed_ms / 1000:.0f}s\n")
 
     hits = total = 0

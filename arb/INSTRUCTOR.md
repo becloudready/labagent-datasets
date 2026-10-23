@@ -12,6 +12,24 @@ Keep this file out of any folder you upload for learners: it lists the planted t
 
 A model that answers any of these with one confident number has hidden the conflict. The fix in Lab 3 is an instruction that requires contradictions to be surfaced.
 
+## Governance drift hidden in email (the formats exercise)
+
+Two replies to minutes emails change things that no register ever recorded. Real organisations drift like this.
+
+| Reply | What it changes | Where the truth is | Where it is NOT |
+|---|---|---|---|
+| `MIN-2026-04-28-R1` (Legal, 2026-04-30) | Adds a requirement for SUB-2026-005: the key linking pseudonyms to customers must be destroyed at 90 days, or the 13 month copy is still personal data | Only in the email | The pack, the minutes, the governance log, and the conditions table |
+| `MIN-2026-08-18-R1` (Chair, 2026-10-02) | Moves NetGraph condition C2 from 2026-11-15 to 2026-12-15 and warns that DISP-2026-005 still ends on 2026-11-30 | The email, which is the latest | The dispensation PDF, the register, and the tracker, which still say 2026-11-15 |
+
+A system that answers from the pack or the register is wrong. A system that answers from the email alone misses the original context. The right answer combines them and flags the 15 day gap between the new due date and the end of the dispensation.
+
+## Parsing notes
+
+- The PDFs put the header and footer on every page. Default pypdf extraction keeps them inside chunks and splits every table row into one cell per line. Layout mode keeps rows on one line but needs the header and footer removed. `tools/extract.py` is a worked example.
+- The superseded standard carries a diagonal SUPERSEDED watermark. Text extraction does not return it, but the metadata table on the page says `Status | Superseded`, and so does the chunk metadata.
+- Bullet glyphs in the PDFs are emitted as a control character. The extractor converts them to `-`.
+- The minutes emails quote the original in replies. A retriever that does not strip quoted lines will retrieve the same sentence twice.
+
 ## Other traps
 
 - **Superseded standard.** STD-API-004 version 2.1 allowed partner API keys. Version 3.0 forbids them. The retriever may rank the old one first.

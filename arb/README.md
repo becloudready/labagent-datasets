@@ -1,34 +1,46 @@
 # ARB dataset: an Architecture Review Board corpus for RAG labs
 
-A fictional telecom, **Meridian Communications**, and the records its Architecture Review Board (ARB) would hold: process, standards, submissions, decisions, dispensations, minutes, and a throughput workbook. Plus public architecture guidance that is licensed for reuse. Built so the same corpus can be loaded into different RAG implementations and compared.
+A fictional telecom, **Meridian Communications**, and the records its Architecture Review Board (ARB) would hold, in the formats it would hold them: **PDF** for standards, policies, forms, submission packs and dispensations; **email (.eml)** for minutes and the replies that change them; **Excel and CSV** for the registers. Plus public architecture guidance that is licensed for reuse. Built so the same corpus can be loaded into different RAG implementations and compared.
 
-Everything about Meridian is invented. No real company, customer, or employee appears.
+Everything about Meridian is invented. No real company, customer, or employee appears. Email addresses use the reserved `.example` domain.
 
 | | |
 |---|---|
-| Documents | 80: 56 Meridian documents, 4 register tables, 20 public references |
-| Chunks | 235, about 1,100 characters each, with metadata |
-| Evaluation questions | 30 (see below), each with expected source documents and expected facts |
+| Corpus files | 41 PDF, 17 email, 4 Excel, 4 CSV, 20 public web pages (Markdown) |
+| Documents | 82 (62 Meridian documents and emails, 20 public references) |
+| Chunks | 259, about 1,000 characters each, with page numbers and metadata |
+| Evaluation questions | 32, each with expected source documents and expected facts |
 | As of | 2026-10-15 (the date inside the dataset: it decides which dispensations have expired) |
-| Size | chunks 70 KB, corpus archive 0.3 MB |
+| Size | corpus archive 0.6 MB, chunks 75 KB |
 
-## What is in the corpus
+## What is in the corpus (`corpus/` in the archive)
 
-| Folder | Content | Count |
-|---|---|---|
-| `docs/process` | ARB charter, Front Door guide (request type to gate, form, tier), gate definitions, forms catalog, service levels, dispensation policy, appeals, tracker schema, throughput definitions | 9 |
-| `docs/standards` | Nine current standards with numbered requirements (cloud, identity, data, API, resilience, logging, AI, third-party risk, integration) and one superseded version | 10 |
-| `docs/submissions` | Fifteen full submission packs with a standards compliance matrix, options, decision, and conditions | 15 |
-| `docs/dispensations` | Seven dispensation requests with conditions, owners, and expiry. Status is as of 2026-10-15 | 7 |
-| `docs/minutes` | Minutes of every working session that decided a full submission | 15 |
-| `docs/registers` | Governance log, dispensation register, ARB Submission Tracker, throughput workbook (CSV, and Excel in the archive) | 4 |
-| `public` | Public guidance with source, licence, and attribution recorded in each file | 20 |
+| Folder | Format | Content | Files |
+|---|---|---|---|
+| `process` | PDF | ARB charter, Front Door guide (request type to gate, form, tier), gate definitions, forms catalog, service levels, dispensation policy, appeals, tracker schema, throughput definitions | 9 |
+| `standards` | PDF | Nine current standards with numbered requirements, plus one superseded version carrying a SUPERSEDED watermark | 10 |
+| `submissions` | PDF | Fifteen completed ARB-F3 packs: compliance matrix, options, decision, conditions | 15 |
+| `dispensations` | PDF | Seven completed ARB-F5 dispensation requests. Status is as of 2026-10-15 | 7 |
+| `minutes` | email | Fifteen minutes emails sent the business day after each session, and two follow-up replies | 17 |
+| `registers` | Excel + CSV | Governance log, dispensation register, ARB Submission Tracker, throughput workbook | 4 + 4 |
+| `public` | Markdown | Public guidance (below), each file with source, licence, and attribution | 20 |
+
+The PDFs look like controlled documents: a title block with a metadata table, a running header and footer ("Page n of N", "Uncontrolled when printed"), bookmarks, and tables drawn as cells. The text is selectable. They are **not scans**: there is no OCR step.
 
 The log and workbook hold 76 gate events (74 decided, 2 still in review): 19 from the 15 full submissions plus 57 from smaller submissions that have a row but no pack.
 
+## Why the formats matter
+
+A PDF puts the same words through a harder path than Markdown. With the default extraction of a PDF library, the running header and footer land in the middle of your chunks, and every table row is split into one cell per line, so "STD-API-004 R6 | Conflict | Requires mutual TLS bound tokens" becomes three unrelated lines. The chunks in this release come from **extracting the actual files**:
+
+- **PDF**: pypdf in layout mode, header and footer removed, column gaps kept as ` | `, section names taken from the PDF's own bookmarks, page numbers recorded.
+- **Email**: From, To, Date and Subject kept with the body, so "who said it and when" is searchable.
+
+`arb-<version>.chunks-naive-pdf.jsonl.gz` holds chunks from naive PDF extraction, so you can measure the difference on your own pipeline.
+
 ## Public sources and licences
 
-Included, because the licence allows redistribution with attribution (verified on the source page or repository on 2026-10-23):
+Included, because the licence allows redistribution with attribution (checked on the source page or repository on 2026-10-23):
 
 | Source | Licence | Files |
 |---|---|---|
@@ -53,22 +65,23 @@ The Meridian content is provisionally licensed CC BY 4.0 (author: BeCloudReady).
 
 ## Evaluation set
 
-`arb-<version>.eval.jsonl`, 30 questions. Fields: `id`, `category`, `question`, `expected_docs` (any one of these documents in the retrieved set counts as a hit), `expected_facts` (strings a correct answer should contain), `expect_decline` (the corpus does not answer it, so a good system says so), and for some questions a `trap` note for instructors.
+`arb-<version>.eval.jsonl`, 32 questions. Fields: `id`, `category`, `question`, `expected_docs` (any one of these documents in the retrieved set counts as a hit), `expected_facts` (strings a correct answer should contain), `expect_decline` (the corpus does not answer it, so a good system says so), and for some questions a `trap` note for instructors.
 
-Categories: `navigator` (which gate, form, and service level), `conflict` (two standards disagree), `version` (a superseded standard exists), `temporal` (dates decide the answer), `multi-hop` (needs two documents), `aggregate` (a number from the workbook), `public`, `process`, `decline`.
+Categories: `navigator` (which gate, form, and service level), `conflict` (two standards disagree), `version` (a superseded standard exists), `temporal` (dates decide the answer), `multi-hop` (needs two documents), `email` (the answer exists only in a reply), `aggregate` (a number from the workbook), `public`, `process`, `decline`.
 
 Answers that depend on numbers or dates are computed from the data at build time, so they cannot drift from the documents.
 
 ## Try it locally
 
 ```bash
-pip install 'labagent[rag-local]'
-python3 arb/tools/build.py --version 2026.10           # writes arb/dist
-python3 arb/tools/try_local.py --top-k 5               # retrieval check, no LLM needed
-python3 arb/tools/try_local.py --top-k 5 --answers     # also asks your LLM (Groq key, or local Ollama)
+pip install "labagent[rag-local]" -r arb/requirements.txt   # the requirements file is only needed to rebuild
+python3 arb/tools/build.py --version 2026.10                # renders the corpus and writes arb/dist
+python3 arb/tools/try_local.py --top-k 5                    # retrieval check, no LLM needed
+python3 arb/tools/try_local.py --top-k 5 --naive            # same, with naive PDF extraction
+python3 arb/tools/try_local.py --top-k 5 --answers          # also asks your LLM (Groq key, or local Ollama)
 ```
 
-Or in Python:
+Or in Python, from the released chunks:
 
 ```python
 import gzip, json
@@ -78,23 +91,27 @@ rag = RAGLabClient(vector_db="chroma"); rag.ingest_chunks(rows)
 print(rag.query("Which gate and form apply to a new SaaS survey tool?", where={"doc_type": "process"}).answer)
 ```
 
-Metadata on every chunk: `doc_id`, `doc_type`, `title`, `section`, `status` (current or superseded for standards; Active, Expired, or Revoked for dispensations), `version`, `owner`, `effective_date`, `source_system`, `source_path`, `license`, and for public references `url` and `attribution`.
+To ingest the **raw files** yourself (the realistic exercise), point a parser at `arb/dist/corpus/`. `labagent` reads the PDFs with pypdf's default mode, which shows the naive-extraction problems above. It does not read `.eml` files yet.
+
+Metadata on every chunk: `doc_id`, `doc_type`, `title`, `section`, `status` (current or superseded for standards; Active, Expired, or Revoked for dispensations), `version`, `owner`, `effective_date`, `source_system`, `source_path`, `source_format`, `license`, `page_start` and `page_end` for PDFs, `sender` and `subject` for email, and for public references `url` and `attribution`.
 
 ## Measured so far (local, 2026-10-23)
 
-Chroma with `all-MiniLM-L6-v2`, top 5, labagent hybrid rerank: **23 of 27 answerable questions retrieve an expected document (85%)**. The misses are the kind a lab should show: questions that need a scan of a register, date arithmetic across documents, or a broad "which ones" question. Indexing takes about 2 seconds.
+Chroma with `all-MiniLM-L6-v2`, top 5, labagent's hybrid rerank, 29 answerable questions:
 
-Answer quality was checked on 6 of the questions with two local models (Ollama, same retrieval). The three questions with no answer in the corpus are the hard part:
+| PDF extraction | Retrieves an expected document |
+|---|---|
+| Layout-aware (this release's chunks) | 25 of 29 (86%) |
+| Naive (default pypdf) | 24 of 29 (83%) |
 
-| Model | Declined the 3 unanswerable questions | Facts present in the 3 answerable answers checked |
-|---|---|---|
-| qwen2.5-coder 0.5B | 0 of 3. It invented a vendor name and used the Tier 1 cost limit as an approval limit | 1 of 4 questions fully right |
-| qwen2.5-coder 7B | 2 of 3. It still mistook the Tier 3 cost trigger for an approval limit | 2 of 4 questions fully right |
+The one-question gap understates the problem: retrieving the right document says nothing about whether a broken table row yields a correct answer, and that was not measured. The misses in both runs are the kind a lab should show: a register scan (which dispensations expire before 2027), date arithmetic across documents, and a broad "which ones" question.
 
-Fact and refusal checks are simple string matches, so treat these numbers as a rough guide. A hosted model was not tested.
+Answers were checked on a handful of questions with two local models only (Ollama, same retrieval). The three questions with no answer in the corpus are the hard part: the 0.5B model answered all three anyway, and the 7B model declined two and mistook the Tier 3 cost trigger for an approval limit. On the email-only questions the 7B model found the changed due date but missed that the dispensation ends 15 days before it. Fact and refusal checks are simple string matches, so treat these as a rough guide. A hosted model was not tested.
 
 ## What is not built yet
 
-The outline's other implementations need more than documents: Microsoft 365 Copilot needs the content in SharePoint plus mail and Teams history, and Atlassian Rovo needs Confluence pages and Jira issues. This release is the document corpus (Markdown, CSV, Excel) in a folder layout that can be uploaded to SharePoint. Emails, Teams chats, and Confluence or Jira renderings are future work and would be generated from the same source data.
+- **Microsoft 365 Copilot** needs the content in SharePoint plus real mail and Teams history, and **Atlassian Rovo** needs Confluence pages and Jira issues. The corpus folder layout can be uploaded to SharePoint as is. Teams chats and Confluence or Jira renderings are future work and would be generated from the same source data.
+- **Scanned documents.** Real archives contain scans that need OCR. These PDFs are text-based.
+- **Word and PowerPoint.** Only PDF, email and Excel are produced. A Word version of the process documents would be a small addition.
 
 The instructor notes are in [INSTRUCTOR.md](INSTRUCTOR.md) and are not part of the corpus archive.

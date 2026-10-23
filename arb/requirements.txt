@@ -1,0 +1,5 @@
+# Tools needed to REBUILD the ARB dataset (using the released files needs none of these)
+pypdf>=4
+reportlab>=4,<4.3   # 4.3+ needs Python 3.10; 4.2 runs on 3.9
+openpyxl>=3.1
+pytest>=8

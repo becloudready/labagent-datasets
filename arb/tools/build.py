@@ -27,6 +27,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import extract  # noqa: E402
+import render_eml  # noqa: E402
+import render_pdf  # noqa: E402
 import submissions as S  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -287,31 +290,38 @@ def log_rows(recs) -> List[Dict[str, Any]]:
     return rows
 
 
-def render_minutes(date: dt.date, recs, rows) -> str:
-    members = [S.PEOPLE[k] for k in ("chair", "sec", "data", "infra", "integ", "app")]
+def minutes_inputs(date: dt.date, recs) -> Tuple[List[str], Optional[str], List[Dict[str, Any]], List[Dict[str, Any]]]:
     rng = random.Random(date.toordinal())
     absent = rng.choice([None, "sec", "data", "infra", "app"])
-    present = [S.PEOPLE[k] for k in ("chair", "sec", "data", "infra", "integ", "app") if k != absent]
-    todays = [r for r in recs if r["decided"] == date and r["tier"] != "T1"]
-    fulls = [r for r in todays if r["full"]]
-    others = [r for r in todays if not r["full"]]
-    lines = [front(f"MIN-{date.isoformat()}", f"ARB minutes {date.isoformat()}", "minutes", {"owner": S.PEOPLE["front"].split(" (")[0], "effective_date": date.isoformat()}),
-             f"# ARB working session minutes, {date.isoformat()}", "", "## Attendance", "",
-             f"Present: {'; '.join(present)}; {S.PEOPLE['front']}.", "",
-             f"Absent: {S.PEOPLE[absent] if absent else 'none'}. Quorum (Chair or Deputy plus three domain architects): met.", "", "## Items decided", ""]
+    present = [S.PEOPLE[k] for k in ("chair", "sec", "data", "infra", "integ", "app") if k != absent] + [S.PEOPLE["front"]]
     byid = {s["id"]: s for s in S.SUBMISSIONS}
-    for r in fulls:
-        s = byid[r["submission"]]
-        lines += [f"### {r['submission']} {r['name']} ({r['gate']}, {TIER_NAME[r['tier']]})", "", f"Decision: **{r['outcome']}**.", "", s["discussion"], ""]
-        last = s["gates"][-1]
-        if s["conditions"] and r["gate"] == last[0] and r["decided"] == D(last[2] or "1900-01-01"):
-            lines += ["Conditions:", ""] + [f"- {c['id']}: {c['text']} Owner {c['owner']}, due {c['due']}." for c in s["conditions"]] + [""]
-        if s["dispensations"] and r["outcome"].startswith("Approved") and r["gate"] == last[0]:
-            lines += ["Dispensation granted: " + ", ".join(s["dispensations"]) + ".", ""]
-    if others:
-        lines += ["### Other decisions at this session", ""] + [f"- {r['submission']} {r['name']} ({r['gate']}, {TIER_NAME[r['tier']]}): {r['outcome']}." for r in others] + [""]
-    lines += ["## Next session", "", "Tuesday at 10:00. Minutes are published within 2 business days."]
-    return "\n".join(lines) + "\n"
+    items, others = [], []
+    for r in recs:
+        if r["decided"] != date or r["tier"] == "T1":
+            continue
+        base = dict(id=r["submission"], name=r["name"], gate=r["gate"], tier_name=TIER_NAME[r["tier"]], outcome=r["outcome"])
+        if r["full"]:
+            sub = byid[r["submission"]]
+            last = sub["gates"][-1]
+            final = r["gate"] == last[0] and r["decided"] == D(last[2] or "1900-01-01")
+            items.append(dict(base, discussion=sub["discussion"], conditions=sub["conditions"] if final else [],
+                              dispensations=sub["dispensations"] if final and r["outcome"].startswith("Approved") else []))
+        else:
+            others.append(base)
+    return present, absent, items, others
+
+
+def minutes_emails(date: dt.date, recs) -> List[Tuple[str, bytes, Dict[str, str]]]:
+    """(doc_id, .eml bytes, info) for the minutes email and any follow-up replies. The email is sent one business day after the session."""
+    present, absent, items, others = minutes_inputs(date, recs)
+    sent_day = add_bdays(date, 1)
+    sent = dt.datetime(sent_day.year, sent_day.month, sent_day.day, 16, random.Random(date.toordinal() + 1).randint(5, 55), tzinfo=render_eml._tz(sent_day))
+    msg = render_eml.minutes_message(date, sent, present, absent, items, others)
+    out = [(f"MIN-{date.isoformat()}", render_eml.to_bytes(msg), dict(date=date.isoformat(), kind="minutes"))]
+    for f in S.FOLLOWUPS:
+        if f["minutes"] == date.isoformat():
+            out.append((f"MIN-{date.isoformat()}-{f['suffix']}", render_eml.to_bytes(render_eml.reply_message(msg, f)), dict(date=f["sent"][:10], kind="reply")))
+    return out
 
 
 def csv_text(rows: List[Dict[str, Any]], cols: List[str]) -> str:
@@ -492,8 +502,119 @@ def table_chunks(doc_id: str, title: str, doc_type: str, rows: List[Dict[str, An
         text = "| " + " | ".join(cols) + " |\n|" + "---|" * len(cols) + "\n" + "\n".join("| " + " | ".join(str(r.get(c, "")) for c in cols) + " |" for r in grp)
         out.append(dict(id=f"{doc_id}-{i // per + 1}", doc_id=doc_id, title=f"{title}, rows {i + 1} to {i + len(grp)}", content=f"{title}\n{text}",
                         meta=dict(doc_id=doc_id, doc_type=doc_type, title=title, section=f"rows {i + 1}-{i + len(grp)}", source_system="SharePoint", status="current",
-                                  source_path=source_path, license=CONTENT_LICENSE)))
+                                  source_path=source_path, source_format="csv", license=CONTENT_LICENSE)))
     return out
+
+
+def group_blocks(blocks: List[Tuple[int, str, str]]) -> List[List[Tuple[int, str, str]]]:
+    """Greedy grouping of (page, section, text) blocks into chunks of about MAX_CHUNK characters. Long blocks are cut on line boundaries first."""
+    groups, cur, size = [], [], 0
+    for pg, sec, text in blocks:
+        for piece in (pack_lines(text, MAX_CHUNK) if len(text) > MAX_CHUNK else [text]):
+            if cur and size + len(piece) > MAX_CHUNK:
+                groups.append(cur)
+                cur, size = [], 0
+            cur.append((pg, sec, piece))
+            size += len(piece) + 2
+    if cur:
+        groups.append(cur)
+    return groups
+
+
+def pdf_file_chunks(path: Path, rel: str, fm: Dict[str, str], naive: bool = False) -> List[Dict[str, Any]]:
+    """Chunks from the PDF itself. Section names come from the PDF's bookmarks, page numbers from the extraction."""
+    pages = extract.pdf_pages(path, naive=naive)
+    titles = {t for _, t in extract.pdf_outline(path)}
+    blocks, section = [], "Overview"
+    for pg, text in pages:
+        for block in re.split(r"\n\s*\n", text):
+            first = block.strip().splitlines()[0].strip() if block.strip() else ""
+            if first in titles:
+                section = first
+            if block.strip():
+                blocks.append((pg, section, block))
+    doc_id, title = fm["doc_id"], fm.get("title", fm["doc_id"])
+    meta_base = {k: fm[k] for k in ("doc_type", "title", "version", "status", "owner", "effective_date", "source_system", "tier", "outcome", "request_type") if k in fm}
+    meta_base.update(doc_id=doc_id, source_path=rel, source_format="pdf", license=CONTENT_LICENSE)
+    out = []
+    for n, g in enumerate(group_blocks(blocks), 1):
+        first = g[0][1]
+        secs = list(dict.fromkeys(sec for _, sec, _ in g))
+        out.append(dict(id=f"{doc_id}-{n}", doc_id=doc_id, title=f"{title}, {first}", content=f"{title} > {first}\n" + "\n\n".join(t for _, _, t in g),
+                        meta={**meta_base, "section": " / ".join(secs), "page_start": g[0][0], "page_end": g[-1][0]}))
+    return out
+
+
+def eml_file_chunks(path: Path, rel: str, doc_id: str, info: Dict[str, str]) -> List[Dict[str, Any]]:
+    headers, body = extract.eml_text(path)
+    head = "\n".join(f"{k}: {headers[k]}" for k in ("From", "To", "Date", "Subject") if k in headers)
+    pieces = pack(head + "\n\n" + body)
+    subj = headers.get("Subject", doc_id)
+    base = dict(doc_id=doc_id, doc_type="minutes" if info["kind"] == "minutes" else "email", title=subj, source_system="Outlook", status="current",
+                effective_date=info["date"], source_path=rel, source_format="eml", sender=headers.get("From", ""), subject=subj, license=CONTENT_LICENSE)
+    if "In-Reply-To" in headers:
+        base["in_reply_to"] = headers["In-Reply-To"]
+    return [dict(id=f"{doc_id}-{n}", doc_id=doc_id, title=subj, content=f"{piece}", meta={**base, "section": "email body" if n > 1 else "headers and opening"})
+            for n, piece in enumerate(pieces, 1)]
+
+
+def file_slug(text: str) -> str:
+    return re.sub(r"[^A-Za-z0-9]+", "-", text).strip("-")
+
+
+def pdf_filename(fm: Dict[str, str]) -> str:
+    t, d = fm["doc_type"], fm["doc_id"]
+    if t == "standard":
+        return f"{d}_{file_slug(fm['title'])}_v{fm['version']}.pdf"
+    if t == "submission":
+        return f"{d}_{file_slug(fm['title'].split(' ', 1)[1])}_ARB-F3.pdf"
+    if t == "dispensation":
+        return f"{d}_ARB-F5.pdf"
+    return f"{file_slug(fm['title'])}_v{fm['version']}.pdf"
+
+
+def workbook(sheets: Dict[str, Tuple[List[str], List[List[Any]]]]) -> Optional[bytes]:
+    """An Excel workbook from {sheet name: (columns, rows)}. Reproducible (fixed timestamps). None when openpyxl is not installed."""
+    try:
+        from openpyxl import Workbook
+    except ImportError:
+        return None
+    wb = Workbook()
+    wb.remove(wb.active)
+    for name, (cols, rows) in sheets.items():
+        ws = wb.create_sheet(name)
+        ws.append(cols)
+        for r in rows:
+            ws.append(r)
+        ws.freeze_panes = "A2"
+    wb.properties.creator = "BeCloudReady"
+    wb.properties.created = wb.properties.modified = dt.datetime(2026, 10, 15)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return normalise_zip(buf.getvalue())
+
+
+def table_workbook(rows: List[Dict[str, Any]], cols: List[str], name: str, definitions: str = "") -> Optional[bytes]:
+    numeric = {"paused_business_days", "cycle_business_days", "sla_business_days", "OpenConditions"}
+    data = [[(int(r[c]) if c in numeric and r.get(c, "") != "" else r.get(c, "")) for c in cols] for r in rows]
+    sheets = {name: (cols, data)}
+    if definitions:
+        lines = [re.sub(r"^[#\-\s*]+", "", l).replace("**", "") for l in re.sub(r"^---.*?---\n", "", definitions, flags=re.S).strip().splitlines() if l.strip()]
+        sheets["Definitions"] = (["Definitions"], [[l] for l in lines])
+    return workbook(sheets)
+
+
+def normalise_zip(data: bytes) -> bytes:
+    """openpyxl stamps every file inside the .xlsx with the current time. Rewrite it with a fixed time so the build is reproducible."""
+    src = zipfile.ZipFile(io.BytesIO(data))
+    out = io.BytesIO()
+    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as dst:
+        for name in sorted(src.namelist()):
+            body = src.read(name)
+            if name == "docProps/core.xml":                # openpyxl rewrites the modified time on every save
+                body = re.sub(rb"(<dcterms:(?:created|modified)[^>]*>)[^<]*(</dcterms:)", rb"\g<1>2026-10-15T00:00:00Z\g<2>", body)
+            dst.writestr(zipfile.ZipInfo(name, date_time=(2026, 10, 15, 0, 0, 0)), body)
+    return out.getvalue()
 
 
 # ---------------------------------------------------------------- evaluation set
@@ -536,6 +657,8 @@ def build_eval(recs, disp_rows, throughput) -> List[Dict[str, Any]]:
         ("proc-02", "process", "Can the CTO overrule an ARB decision?", ["PROC-001", "PROC-007"], ["in writing"], False),
         ("proc-03", "process", "What is the quorum for an ARB decision?", ["PROC-001"], ["three of the five"], False),
         ("proc-04", "process", "What must a retrieval-augmented AI system do about user permissions?", ["STD-AI-007", "SUB-2026-014"], ["permission"], False),
+        ("mail-01", "email", "What additional requirement did Legal and Privacy put on the pseudonymised logs for the Customer360 lakehouse?", ["MIN-2026-04-28-R1"], ["key", "destroyed", "90 days"], False),
+        ("mail-02", "email", "What is the current due date for the NetGraph masking condition, and does the dispensation still cover it?", ["MIN-2026-08-18-R1", "DISP-2026-005"], ["2026-12-15", "2026-11-30"], False),
         ("dec-01", "decline", "What is the name of the vendor selected for the observability platform?", [], [], True),
     ]
     traps = {"nav-05": "The Tier 1 criteria mention 50 thousand US dollars, which is a fast-track eligibility limit, not an approval limit.",
@@ -545,48 +668,13 @@ def build_eval(recs, disp_rows, throughput) -> List[Dict[str, Any]]:
              "conf-02": "A good answer surfaces the conflict between STD-API-004 R6 and STD-SEC-002 R7 and that STD-API-004 was ruled more specific for PartnerHub.",
              "conf-03": "STD-RES-005 says 60 minutes, STD-CLD-001 R9 says 15 minutes. A confident single number hides the conflict.",
              "ver-01": "STD-API-004 version 2.1 (superseded) allowed API keys for partners; version 3.0 does not. The superseded document must not win.",
+             "mail-01": "The condition exists ONLY in a reply email. The submission pack, the minutes, and the governance log do not mention it.",
+             "mail-02": "The due date was moved by email on 2026-10-02 and never reached the register or tracker, which still say 2026-11-15. The dispensation ends 2026-11-30, 15 days before the new date.",
              "tmp-01": "The dispensation text says granted until 2026-09-30; the dataset date is 2026-10-15, so it has expired and no renewal was filed."}
     return [dict(id=i, category=c, question=q, expected_docs=d, expected_facts=f, expect_decline=dc, **({"trap": traps[i]} if i in traps else {})) for i, c, q, d, f, dc in qs]
 
 
 # ---------------------------------------------------------------- output
-def throughput_xlsx(rows: List[Dict[str, Any]], cols: List[str]) -> Optional[bytes]:
-    """The throughput workbook as Excel, with a Definitions sheet. Skipped (returns None) when openpyxl is not installed."""
-    try:
-        from openpyxl import Workbook
-    except ImportError:
-        return None
-    wb = Workbook()
-    ws = wb.active
-    ws.title = "Throughput"
-    ws.append(cols)
-    for r in rows:
-        ws.append([int(r[c]) if c in ("paused_business_days", "cycle_business_days", "sla_business_days") and r[c] != "" else r[c] for c in cols])
-    ws.freeze_panes = "A2"
-    d = wb.create_sheet("Definitions")
-    for line in re.sub(r"^---.*?---\n", "", THROUGHPUT_DEFS, flags=re.S).strip().splitlines():
-        if line.strip():
-            d.append([re.sub(r"^[#\-\s*]+", "", line).replace("**", "")])
-    wb.properties.creator = "BeCloudReady"
-    wb.properties.created = wb.properties.modified = dt.datetime(2026, 10, 15)       # keeps the file reproducible
-    buf = io.BytesIO()
-    wb.save(buf)
-    return normalise_zip(buf.getvalue())
-
-
-def normalise_zip(data: bytes) -> bytes:
-    """openpyxl stamps every file inside the .xlsx with the current time. Rewrite it with a fixed time so the build is reproducible."""
-    src = zipfile.ZipFile(io.BytesIO(data))
-    out = io.BytesIO()
-    with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as dst:
-        for name in sorted(src.namelist()):
-            body = src.read(name)
-            if name == "docProps/core.xml":                # openpyxl rewrites the modified time on every save
-                body = re.sub(rb"(<dcterms:(?:created|modified)[^>]*>)[^<]*(</dcterms:)", rb"\g<1>2026-10-15T00:00:00Z\g<2>", body)
-            dst.writestr(zipfile.ZipInfo(name, date_time=(2026, 10, 15, 0, 0, 0)), body)
-    return out.getvalue()
-
-
 def gz(data: bytes) -> bytes:
     buf = io.BytesIO()
     with gzip.GzipFile(fileobj=buf, mode="wb", mtime=0, compresslevel=9) as f:
@@ -613,15 +701,14 @@ def main() -> int:
     recs = all_records()
     validate(recs)
 
-    # derived, committed documents
-    for s in S.SUBMISSIONS:
-        write_if_changed(DOCS / "submissions" / f"{s['id']}.md", render_submission(s))
+    # derived documents that stay as reviewable Markdown (the PDFs below are rendered from these)
+    for s_ in S.SUBMISSIONS:
+        write_if_changed(DOCS / "submissions" / f"{s_['id']}.md", render_submission(s_))
     for d in S.DISPENSATIONS:
         write_if_changed(DOCS / "dispensations" / f"{d['id']}.md", render_dispensation(d))
+    write_if_changed(DOCS / "process" / "tracker-schema.md", TRACKER_SCHEMA)
+    write_if_changed(DOCS / "process" / "throughput-definitions.md", THROUGHPUT_DEFS)
     rows = log_rows(recs)
-    dates = sorted({r["decided"] for r in recs if r["full"] and r["decided"] and r["tier"] != "T1"})
-    for dte in dates:
-        write_if_changed(DOCS / "minutes" / f"arb-minutes-{dte.isoformat()}.md", render_minutes(dte, recs, rows))
     log_cols = ["decision_id", "decision_date", "submission_id", "submission_name", "gate", "tier", "outcome", "decided_by", "conditions", "dispensation_id", "notes"]
     thr = throughput_rows(recs)
     thr_cols = list(thr[0].keys())
@@ -631,25 +718,58 @@ def main() -> int:
                       granted=d["granted"], expiry=d["expiry"], owner=d["owner"], deviation=d["deviation"],
                       conditions="; ".join(f"{t} (owner {o}, due {due}, {st})" for t, o, due, st in d["conditions"])) for d in S.DISPENSATIONS]
     disp_cols = list(disp_rows[0].keys())
-    write_if_changed(DOCS / "registers" / "governance-log.csv", csv_text(rows, log_cols))
-    write_if_changed(DOCS / "registers" / "throughput-fy2026.csv", csv_text(thr, thr_cols))
-    write_if_changed(DOCS / "registers" / "arb-submission-tracker.csv", csv_text(trk, trk_cols))
-    write_if_changed(DOCS / "registers" / "dispensation-register.csv", csv_text(disp_rows, disp_cols))
-    write_if_changed(DOCS / "process" / "tracker-schema.md", TRACKER_SCHEMA)
-    write_if_changed(DOCS / "process" / "throughput-definitions.md", THROUGHPUT_DEFS)
+    registers = {"governance-log": (rows, log_cols, "Governance log"), "throughput-fy2026": (thr, thr_cols, "Throughput"),
+                 "arb-submission-tracker": (trk, trk_cols, "ARB Submission Tracker"), "dispensation-register": (disp_rows, disp_cols, "Dispensation Register")}
+    for name, (r, c, _t) in registers.items():
+        write_if_changed(DOCS / "registers" / f"{name}.csv", csv_text(r, c))
 
-    # chunks
-    chunks: List[Dict[str, Any]] = []
-    for sub in ("process", "standards", "submissions", "dispensations", "minutes"):
+    # ---- render the corpus as the files an organisation would really hold
+    out = Path(a.out)
+    corpus = out / "corpus"
+    if corpus.exists():
+        import shutil
+        shutil.rmtree(corpus)
+    files: List[Dict[str, Any]] = []
+    for sub in ("process", "standards", "submissions", "dispensations"):
         for p in sorted((DOCS / sub).glob("*.md")):
-            chunks += doc_chunks(p, f"arb/docs/{sub}/{p.name}", public=False)
+            fm, body = parse(p.read_text())
+            target = corpus / sub / pdf_filename(fm)
+            render_pdf.render_pdf(target, fm, body)
+            files.append(dict(kind="pdf", path=target, rel=f"corpus/{sub}/{target.name}", fm=fm))
+    for dte in sorted({r["decided"] for r in recs if r["full"] and r["decided"] and r["tier"] != "T1"}):
+        for doc_id, data, info in minutes_emails(dte, recs):
+            target = corpus / "minutes" / f"{doc_id}.eml"
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(data)
+            files.append(dict(kind="eml", path=target, rel=f"corpus/minutes/{target.name}", doc_id=doc_id, info=info))
+    for name, (r, c, tab) in registers.items():
+        (corpus / "registers").mkdir(parents=True, exist_ok=True)
+        (corpus / "registers" / f"{name}.csv").write_text(csv_text(r, c))
+        xl = table_workbook(r, c, tab, THROUGHPUT_DEFS if name == "throughput-fy2026" else "")
+        if xl:
+            (corpus / "registers" / f"{name}.xlsx").write_bytes(xl)
+    (corpus / "public").mkdir(parents=True, exist_ok=True)
     for p in sorted(PUBLIC.glob("*.md")):
-        chunks += doc_chunks(p, f"arb/public/{p.name}", public=True)
-    chunks += table_chunks("REG-DISPENSATIONS", "Dispensation Register", "register", disp_rows, ["dispensation_id", "submission_id", "standard", "requirement", "status", "granted", "expiry", "owner"], 8, "arb/docs/registers/dispensation-register.csv")
-    chunks += table_chunks("REG-GOVLOG", "Governance Log", "register", rows, ["decision_id", "decision_date", "submission_id", "submission_name", "gate", "tier", "outcome"], 8, "arb/docs/registers/governance-log.csv")
-    chunks += table_chunks("REG-THROUGHPUT", "Throughput Workbook FY2026", "register", thr, ["submission_id", "tier", "gate", "complete_date", "decision_date", "cycle_business_days", "sla_met", "outcome"], 8, "arb/docs/registers/throughput-fy2026.csv")
-    chunks += table_chunks("REG-TRACKER", "ARB Submission Tracker", "register", trk, ["SubmissionID", "Title", "Tier", "CurrentGate", "Status", "DecisionDate", "OpenConditions"], 8, "arb/docs/registers/arb-submission-tracker.csv")
-    xlsx_bytes = throughput_xlsx(thr, thr_cols)
+        (corpus / "public" / p.name).write_bytes(p.read_bytes())
+
+    # ---- chunks come from EXTRACTING those files (not from the Markdown sources)
+    def build_chunks(naive: bool) -> List[Dict[str, Any]]:
+        ch: List[Dict[str, Any]] = []
+        for f in files:
+            if f["kind"] == "pdf":
+                ch += pdf_file_chunks(f["path"], f["rel"], f["fm"], naive=naive)
+            else:
+                ch += eml_file_chunks(f["path"], f["rel"], f["doc_id"], f["info"])
+        for p in sorted(PUBLIC.glob("*.md")):
+            ch += doc_chunks(p, f"corpus/public/{p.name}", public=True)
+        ch += table_chunks("REG-DISPENSATIONS", "Dispensation Register", "register", disp_rows, ["dispensation_id", "submission_id", "standard", "requirement", "status", "granted", "expiry", "owner"], 8, "corpus/registers/dispensation-register.csv")
+        ch += table_chunks("REG-GOVLOG", "Governance Log", "register", rows, ["decision_id", "decision_date", "submission_id", "submission_name", "gate", "tier", "outcome"], 8, "corpus/registers/governance-log.csv")
+        ch += table_chunks("REG-THROUGHPUT", "Throughput Workbook FY2026", "register", thr, ["submission_id", "tier", "gate", "complete_date", "decision_date", "cycle_business_days", "sla_met", "outcome"], 8, "corpus/registers/throughput-fy2026.csv")
+        ch += table_chunks("REG-TRACKER", "ARB Submission Tracker", "register", trk, ["SubmissionID", "Title", "Tier", "CurrentGate", "Status", "DecisionDate", "OpenConditions"], 8, "corpus/registers/arb-submission-tracker.csv")
+        return ch
+
+    chunks = build_chunks(naive=False)
+    naive_chunks = build_chunks(naive=True)
     ids = [c["id"] for c in chunks]
     assert len(ids) == len(set(ids)), "duplicate chunk ids"
 
@@ -660,35 +780,33 @@ def main() -> int:
             if d not in known:
                 raise SystemExit(f"eval {q['id']}: unknown expected doc {d}")
 
-    out = Path(a.out)
-    out.mkdir(parents=True, exist_ok=True)
     v = a.version
-    chunk_bytes = gz(("\n".join(json.dumps(c, ensure_ascii=False, sort_keys=True) for c in chunks) + "\n").encode())
-    eval_bytes = ("\n".join(json.dumps(q, ensure_ascii=False, sort_keys=True) for q in ev) + "\n").encode()
+    out.mkdir(parents=True, exist_ok=True)
+    jl = lambda cs: gz(("\n".join(json.dumps(c, ensure_ascii=False, sort_keys=True) for c in cs) + "\n").encode())
     zbuf = io.BytesIO()
     with zipfile.ZipFile(zbuf, "w", zipfile.ZIP_DEFLATED) as z:
-        for sub in ("process", "standards", "submissions", "dispensations", "minutes", "registers"):
-            for p in sorted((DOCS / sub).glob("*")):
-                zi = zipfile.ZipInfo(f"corpus/{sub}/{p.name}", date_time=(2026, 10, 15, 0, 0, 0))
-                z.writestr(zi, p.read_bytes())
-        for p in sorted(PUBLIC.glob("*.md")):
-            z.writestr(zipfile.ZipInfo(f"corpus/public/{p.name}", date_time=(2026, 10, 15, 0, 0, 0)), p.read_bytes())
-        if xlsx_bytes:
-            z.writestr(zipfile.ZipInfo("corpus/registers/throughput-fy2026.xlsx", date_time=(2026, 10, 15, 0, 0, 0)), xlsx_bytes)
-    zip_bytes = zbuf.getvalue()
-    files = {f"arb-{v}.chunks.jsonl.gz": chunk_bytes, f"arb-{v}.eval.jsonl": eval_bytes, f"arb-{v}.corpus.zip": zip_bytes}
+        for p in sorted(x for x in corpus.rglob("*") if x.is_file()):
+            z.writestr(zipfile.ZipInfo(str(p.relative_to(out)), date_time=(2026, 10, 15, 0, 0, 0)), p.read_bytes())
+    released = {f"arb-{v}.chunks.jsonl.gz": jl(chunks), f"arb-{v}.chunks-naive-pdf.jsonl.gz": jl(naive_chunks),
+                f"arb-{v}.eval.jsonl": ("\n".join(json.dumps(q, ensure_ascii=False, sort_keys=True) for q in ev) + "\n").encode(), f"arb-{v}.corpus.zip": zbuf.getvalue()}
     kinds: Dict[str, int] = {}
     for c in chunks:
         kinds[c["meta"]["doc_type"]] = kinds.get(c["meta"]["doc_type"], 0) + 1
+    formats: Dict[str, int] = {}
+    for p in corpus.rglob("*"):
+        if p.is_file():
+            formats[p.suffix.lstrip(".")] = formats.get(p.suffix.lstrip("."), 0) + 1
     manifest = dict(name="arb", version=v, as_of=S.AS_OF, chunks=len(chunks), documents=len({c["doc_id"] for c in chunks}), questions=len(ev),
-                    chunks_by_type=dict(sorted(kinds.items())), files={n: dict(bytes=len(b), sha256=sha(b)) for n, b in files.items()})
-    man_bytes = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode()
-    files[f"arb-{v}.manifest.json"] = man_bytes
-    for n, b in files.items():
+                    chunks_by_type=dict(sorted(kinds.items())), corpus_files_by_format=dict(sorted(formats.items())),
+                    files={n: dict(bytes=len(b), sha256=sha(b)) for n, b in released.items()})
+    man = (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode()
+    released[f"arb-{v}.manifest.json"] = man
+    for n, b in released.items():
         (out / n).write_bytes(b)
-    (out / "SHA256SUMS").write_text("".join(f"{sha(b)}  {n}\n" for n, b in sorted(files.items())))
-    print(json.dumps({k: manifest[k] for k in ("version", "chunks", "documents", "questions", "chunks_by_type")}, indent=2))
-    print(f"baseline cycle time, Tier 2, H1 2026 (median business days): {statistics.median([r['cycle'] for r in recs if r['decided'] and r['tier'] == 'T2' and D('2026-01-01') <= r['decided'] <= D('2026-06-30')])}")
+    (out / "SHA256SUMS").write_text("".join(f"{sha(b)}  {n}\n" for n, b in sorted(released.items())))
+    print(json.dumps({k: manifest[k] for k in ("version", "chunks", "documents", "questions", "chunks_by_type", "corpus_files_by_format")}, indent=2))
+    t2 = [r["cycle"] for r in recs if r["decided"] and r["tier"] == "T2" and D("2026-01-01") <= r["decided"] <= D("2026-06-30")]
+    print(f"baseline cycle time, Tier 2, H1 2026 (median business days): {statistics.median(t2)}")
     return 0
 
 

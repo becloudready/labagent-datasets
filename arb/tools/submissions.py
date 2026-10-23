@@ -15,7 +15,33 @@ PEOPLE = {
     "integ": "Lena Fischer (Integration Architect, Deputy Chair)",
     "app": "Samir Haddad (Application Architect)",
     "front": "Dev Patel (Front Door Coordinator)",
+    "legal": "Marta Silva (Legal and Privacy adviser)",
 }
+
+# People who send email. Addresses use the reserved .example domain, so they can never be real.
+EMAILS = {
+    "chair": "priya.raman@meridian.example", "sec": "tomas.berg@meridian.example", "data": "aiko.tanaka@meridian.example",
+    "infra": "marcus.oyelaran@meridian.example", "integ": "lena.fischer@meridian.example", "app": "samir.haddad@meridian.example",
+    "front": "dev.patel@meridian.example", "legal": "marta.silva@meridian.example",
+}
+ARB_LIST = "arb-members@meridian.example"
+
+# Replies to minutes emails that change something without anyone updating the registers (this happens in real governance).
+# Each is a separate .eml file whose body is written by build.py from these fields.
+FOLLOWUPS = [
+    dict(minutes="2026-04-28", suffix="R1", sender="legal", sent="2026-04-30 09:41",
+         body=["Hi Dev,",
+               "One addition from Legal and Privacy on SUB-2026-005 (Customer360 lakehouse). The 13 month pseudonymised copy of the logs is acceptable only if the key "
+               "that links the pseudonyms back to customers is destroyed when the 90 days are up. Otherwise the copy is still personal data and the 90 day rule in STD-DAT-003 R5.2 applies to it as well.",
+               "Please add this as a condition for the Lead Data Engineer, due on the same date as C1 (2026-07-31).",
+               "Thanks,", "Marta"]),
+    dict(minutes="2026-08-18", suffix="R1", sender="chair", sent="2026-10-02 14:05",
+         body=["Hi Dev,",
+               "NetGraph asked for more time. Condition C2 (graph data masking in place and real data removed from test) moves from 2026-11-15 to 2026-12-15, because the vendor of the masking tool has slipped its release. I am fine with that.",
+               "Note that DISP-2026-005 still ends on 2026-11-30. If the new date holds, the owner needs to bring a renewal (ARB-F5) to a session in time.",
+               "Please update the tracker.",
+               "Priya"]),
+]
 
 # gate entries: (gate, complete_date, decision_date, paused_business_days, outcome)
 SUBMISSIONS = [

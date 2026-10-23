@@ -135,15 +135,81 @@ def test_three_planted_conflicts_and_one_superseded_standard_exist():
     assert sum("status: superseded" in t for t in std.values()) == 1
 
 
-def test_no_personal_or_real_customer_identifiers():
+def test_no_personal_or_real_customer_identifiers(chunks):
     banned = re.compile(r"AT&T|Collabera|Cognixia|Verizon|T-Mobile|Vodafone", re.I)
     email = re.compile(r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}")
-    for sub in ("process", "standards", "submissions", "dispensations", "minutes", "registers"):
+    for sub in ("process", "standards", "submissions", "dispensations", "registers"):
         for p in (ARB / "docs" / sub).glob("*"):
             text = p.read_text()
             assert not banned.search(text), p.name
             assert not email.search(text), p.name
+    for c in chunks:                                  # the only addresses anywhere are on the reserved .example domain
+        if c["meta"]["doc_type"] == "reference":
+            continue
+        assert not banned.search(c["content"]), c["id"]
+        for addr in email.findall(c["content"]):
+            assert addr.endswith("@meridian.example"), (c["id"], addr)
 
 
 def test_standards_requirements_cited_by_submissions_exist():
     build.validate(build.all_records())
+
+
+# ---- formats: the corpus must be the files an organisation would really hold
+def test_corpus_holds_real_formats(dist):
+    corpus = dist / "corpus"
+    assert len(list(corpus.glob("standards/*.pdf"))) == 10 and len(list(corpus.glob("submissions/*.pdf"))) == 15
+    assert len(list(corpus.glob("dispensations/*.pdf"))) == 7 and len(list(corpus.glob("process/*.pdf"))) == 9
+    assert len(list(corpus.glob("minutes/*.eml"))) >= 15
+    assert list(corpus.glob("minutes/*.md")) == [] and list(corpus.glob("standards/*.md")) == []
+    assert list(corpus.glob("registers/*.xlsx"))
+    for p in corpus.glob("**/*.pdf"):
+        assert p.read_bytes()[:5] == b"%PDF-"
+
+
+def test_minutes_are_valid_threaded_emails(dist):
+    import email
+    from email import policy
+    first = email.message_from_bytes((dist / "corpus/minutes/MIN-2026-04-28.eml").read_bytes(), policy=policy.default)
+    reply = email.message_from_bytes((dist / "corpus/minutes/MIN-2026-04-28-R1.eml").read_bytes(), policy=policy.default)
+    assert first["Subject"].startswith("ARB working session minutes") and first["Message-ID"] and first["Date"]
+    assert reply["In-Reply-To"] == first["Message-ID"] and reply["Subject"] == "Re: " + first["Subject"]
+    assert "destroyed" in reply.get_body(("plain",)).get_content()
+    assert reply["Date"] and email.utils.parsedate_to_datetime(reply["Date"]) > email.utils.parsedate_to_datetime(first["Date"])
+
+
+def test_pdf_extraction_keeps_table_rows_and_drops_page_furniture(chunks):
+    sub6 = [c for c in chunks if c["doc_id"] == "SUB-2026-006"]
+    text = "\n".join(c["content"] for c in sub6)
+    assert "STD-API-004 R6 | Conflict | Requires mutual TLS bound tokens." in text      # a table row survives as one line
+    assert "Uncontrolled when printed" not in text and "Page 1 of" not in text           # header and footer are removed
+    assert all(c["meta"]["source_format"] == "pdf" and c["meta"]["page_start"] >= 1 for c in sub6)
+    assert not any(ord(ch) < 32 and ch not in "\n\t" or ord(ch) == 127 for c in chunks for ch in c["content"])
+
+
+def test_naive_extraction_is_measurably_worse(dist, chunks):
+    import gzip as gz
+    naive = [json.loads(l) for l in gz.open(dist / "arb-t.chunks-naive-pdf.jsonl.gz", "rt")]
+    row = "STD-API-004 R6 | Conflict | Requires mutual TLS bound tokens."
+    assert row not in "\n".join(c["content"] for c in naive if c["doc_id"] == "SUB-2026-006")
+    assert any("Uncontrolled when printed" in c["content"] for c in naive)               # furniture stays in naive chunks
+
+
+def test_the_superseded_standard_is_marked_in_the_pdf_itself(chunks):
+    old = [c for c in chunks if c["doc_id"] == "STD-API-004-V2.1"]
+    assert old and all(c["meta"]["status"] == "superseded" for c in old)
+    assert "Superseded" in old[0]["content"] and "replaced by version 3.0" in old[0]["content"]
+
+
+def test_follow_up_emails_change_things_the_registers_do_not_know(chunks):
+    reply2 = " ".join(c["content"] for c in chunks if c["doc_id"] == "MIN-2026-08-18-R1")
+    assert "2026-12-15" in reply2 and "DISP-2026-005" in reply2
+    register = (ARB / "docs" / "registers" / "dispensation-register.csv").read_text()
+    assert "2026-11-15" in register and "2026-12-15" not in register                      # the drift is deliberate and documented
+    legal = " ".join(c["content"] for c in chunks if c["doc_id"] == "MIN-2026-04-28-R1")
+    assert "destroyed" in legal
+    assert "destroyed" not in (ARB / "docs" / "submissions" / "SUB-2026-005.md").read_text()
+
+
+def test_eval_has_email_questions(evalset):
+    assert {"mail-01", "mail-02"} <= {q["id"] for q in evalset} and any(q["category"] == "email" for q in evalset)
