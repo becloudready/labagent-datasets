@@ -1,45 +1,56 @@
-# labagent-datasets
+# labagent-datasets: checksummed datasets for RAG labs and workshops
 
-Versioned, checksummed datasets used by [labagent](https://github.com/becloudready/labagent) lab packs. Files are published as
-**release assets**, not committed. labagent pins each release by SHA-256.
+> Real-world datasets for **retrieval-augmented generation (RAG)** labs: **SEC 10-K filings** and an **architecture review board (ARB)** corpus in PDF, email and Excel. Every released file has a SHA-256 checksum. Built for [labagent](https://github.com/becloudready/labagent), usable with any vector database.
 
-## sec-10k 2026.10
+**Related:** [labagent](https://github.com/becloudready/labagent) (the lab CLI) | [DB Agent](https://github.com/db-agent/db-agent) (text-to-SQL agent) | [BeCloudReady workshops](https://github.com/becloudready/workshops)
 
-Section-split text from recent SEC 10-K annual reports, chunked for retrieval (RAG) workshops.
+## Datasets
 
-| | |
-|---|---|
-| Passages | 1,880 |
-| Filings | 10 (AAPL, CVX, JPM, PFE, WMT; two fiscal years each) |
-| Sections | Item 1 Business, Item 1A Risk Factors, Item 7 MD&A |
-| As of | 2026-10-22 |
-| Size | about 0.5 MB compressed |
+| Dataset | What it is | Formats | Size | Status |
+|---|---|---|---|---|
+| [`sec-10k`](sec-10k/README.md) | 1,880 section-split passages from 10 annual reports (Apple, Chevron, JPMorgan, Pfizer, Walmart; two years each) | JSONL (gzip) | 0.5 MB | Released: `2026.10` |
+| [`arb`](arb/README.md) | 82 documents of a fictional telecom's architecture review board: standards, submission packs, dispensations, minutes, registers, and 32 evaluation questions | PDF, email (.eml), Excel, JSONL | 0.7 MB | Release pending |
 
-**Files** (in the release): `sec-10k-2026.10.chunks.jsonl.gz`, `sec-10k-2026.10.manifest.json`, `SHA256SUMS`.
+## Why use them
 
-**Record format** (one JSON object per line):
-`id`, `title`, `content`, `meta` with `ticker`, `company`, `form`, `fiscal_year` (year of the period end date), `item`, `section`, `filed`, `url` (the filing on sec.gov).
+- **Pinned and verifiable.** Files are published as release assets with a `SHA256SUMS` file. labagent refuses a download whose checksum does not match.
+- **Realistic formats.** The ARB corpus is PDF, email and Excel, as an enterprise holds it. It teaches PDF table extraction, header and footer noise, and email threads that change an earlier decision.
+- **Built to be evaluated.** Each dataset ships with questions, expected source documents and expected facts. The ARB set includes conflicting standards, an expired dispensation and questions with no answer.
+- **Honest limits.** Each data card lists known gaps and what was measured.
 
-**Use with labagent** (the `rag-sec-filings` pack ships in labagent 0.2.0, not yet on PyPI)
+## Quick start
+
+SEC 10-K filings on Databricks (Lakebase with pgvector), through labagent:
+
 ```bash
 pip install 'labagent[rag]'
-labagent launch rag-sec-filings --name sec --param profile=<databricks-profile>
+labagent launch rag-sec-filings --name demo
+labagent destroy rag-sec-filings --name demo
 ```
 
-**Verify a download**
+ARB corpus on your laptop, with Chroma and local embeddings (after the release is published):
+
+```bash
+pip install 'labagent[rag-local]'
+# download arb-2026.10.chunks.jsonl.gz from the release, then:
+python3 -c "import gzip,json; from labagent.ai.rag import RAGLabClient; r=RAGLabClient(vector_db='chroma'); r.ingest_chunks([json.loads(l) for l in gzip.open('arb-2026.10.chunks.jsonl.gz','rt')]); print(r.query('Which gate applies to a new SaaS tool?').answer)"
+```
+
+## Verify a download
+
 ```bash
 shasum -a 256 -c SHA256SUMS
 ```
 
-### Known limitations
+## Licences
 
-- **JPM and CVX have no Item 7 (MD&A).** Those filings place or incorporate the discussion elsewhere, and the parser only reads Item 7.
-- **Tables are flattened to text.** Do not rely on numbers that come from tables.
-- A few chunks are bare headings or page numbers, and a few exceed the 1,200 character target.
-- Walmart's fiscal year ends in January, so its `fiscal_year` 2026 is the year ended January 2026.
-- No embeddings are included: embed with the model of your choice.
+| Dataset | Terms |
+|---|---|
+| `sec-10k` | Text derived from filings on SEC EDGAR. Credit the SEC as the source. No warranty. Not investment advice |
+| `arb` | The fictional Meridian content is provisionally CC BY 4.0 (author: BeCloudReady). Public references keep their own licence, source URL and attribution in each file: CC BY 4.0, Open Government Licence v3.0, MIT or CC0 |
 
-### Source and terms
+## Contribute
 
-Text is derived from filings published on the SEC's [EDGAR](https://www.sec.gov/edgar) system. Each record links to its original filing.
-Please credit the SEC as the source. Provided as is, with no warranty. Informational only, not investment advice.
+Found a wrong fact or a broken question? Open an issue. New dataset ideas for RAG, text-to-SQL and agent labs are welcome.
+
+Maintained by [BeCloudReady](https://becloudready.com/).
