@@ -20,12 +20,12 @@
 
 ## Quick start
 
-SEC 10-K filings on Databricks (Lakebase with pgvector), through labagent:
+SEC 10-K filings on Databricks (Lakebase with pgvector), as a step-by-step notebook tutorial (ships in the next labagent release; install from GitHub until then):
 
 ```bash
-pip install 'labagent[rag]'
-labagent launch rag-sec-filings --name demo
-labagent destroy rag-sec-filings --name demo
+pip install 'labagent[rag] @ git+https://github.com/becloudready/labagent'
+labagent launch rag-sec-tutorial --name demo
+labagent destroy rag-sec-tutorial --name demo
 ```
 
 ARB corpus on your laptop, with Chroma and local embeddings (after the release is published):

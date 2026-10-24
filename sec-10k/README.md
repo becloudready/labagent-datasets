@@ -15,11 +15,13 @@ Section-split text from recent SEC 10-K annual reports, chunked for retrieval (R
 **Record format** (one JSON object per line):
 `id`, `title`, `content`, `meta` with `ticker`, `company`, `form`, `fiscal_year` (year of the period end date), `item`, `section`, `filed`, `url` (the filing on sec.gov).
 
-**Use with labagent** (the `rag-sec-filings` pack is in labagent 0.2.1 on PyPI)
+**Use with labagent** (the `rag-sec-tutorial` pack is on labagent's `main` branch and ships in the next release; install from GitHub until then)
 ```bash
-pip install 'labagent[rag]'
-labagent launch rag-sec-filings --name sec --param profile=<databricks-profile>
+pip install 'labagent[rag] @ git+https://github.com/becloudready/labagent'
+labagent launch rag-sec-tutorial --name demo --param profile=<databricks-profile>
 ```
+It uploads nine notebooks to your Databricks workspace. You run them in order: they download this dataset, check its SHA-256, embed it, load it into
+Lakebase (Postgres with pgvector) and build a search and answer app on it.
 
 **Verify a download**
 ```bash
